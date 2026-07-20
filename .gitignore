@@ -1,0 +1,7 @@
+node_modules/
+desktop.ini
+
+# QA artifacts (scripts are kept; outputs are not)
+qa/*.png
+qa/*.json
+qa/screens/

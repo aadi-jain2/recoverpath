@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RecoverPath — Catch heart failure before it becomes a readmission</title>
+<meta name="description" content="RecoverPath is a chest strap combining bioimpedance, ECG, SpO2, acoustic and activity sensing to detect heart failure and COPD deterioration days before a hospital readmission." />
+
+<!-- TODO: replace with the real production domain once one exists. -->
+<link rel="canonical" href="https://www.recoverpath.example/" />
+
+<!-- Open Graph / Twitter Card — TODO: swap og-image.png for a real
+     1200x630 share image and update the absolute URLs once the site
+     has a real domain. -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="RecoverPath — Catch heart failure before it becomes a readmission" />
+<meta property="og:description" content="A chest strap combining bioimpedance, ECG, SpO2, acoustic and activity sensing to detect heart failure and COPD deterioration days before a hospital readmission." />
+<meta property="og:url" content="https://www.recoverpath.example/" />
+<meta property="og:image" content="https://www.recoverpath.example/og-image.png" /><!-- id: ogImagePlaceholder -->
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="RecoverPath — Catch heart failure before it becomes a readmission" />
+<meta name="twitter:description" content="A chest strap combining bioimpedance, ECG, SpO2, acoustic and activity sensing to detect heart failure and COPD deterioration days before a hospital readmission." />
+<meta name="twitter:image" content="https://www.recoverpath.example/og-image.png" />
+
+<!-- Favicon — the real brand mark (RC_Logo_TBG.png, transparent bg).
+     Note: it's a fixed dark-charcoal mark, so it may be low-contrast in
+     browser chrome that uses a dark tab bar theme (favicons aren't
+     styleable by the page's own dark/light toggle) — worth a look if a
+     light-mode variant becomes available later. -->
+<link rel="icon" type="image/png" href="RC_Logo_TBG.png" />
+
+<!-- ============================================================
+     FONTS — Display: Fraunces (editorial serif, headings/eyebrows)
+              Body: Inter (workhorse sans)
+              Mono: IBM Plex Mono (sensor/technical labels)
+     Swap these <link> tags to change the whole type system.
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<!-- Split into two requests with different `display` strategies —
+     measured a real ~0.17 layout-shift contribution (via
+     PerformanceObserver's layout-shift entries) from the hero title
+     reflowing once Fraunces swapped in over its fallback serif.
+     Fraunces uses `display=optional`: the browser only uses it if it's
+     already cached/loaded in time, and never swaps later, trading an
+     occasional fallback-font render for zero reflow. Inter/Plex Mono
+     keep `display=swap` — they're closer in metrics to their
+     fallbacks, so swapping them causes far less visible shift, and
+     body copy benefits more from eventually always getting the
+     intended font. -->
+<!-- Loaded non-render-blocking via the standard "media=print, swap to
+     all on load" trick (Lighthouse flagged ~2.2s of render-blocking
+     time from these two stylesheets on throttled mobile). The
+     <noscript> fallback keeps it a normal blocking stylesheet when JS
+     is unavailable, so nothing regresses without JS. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+</noscript>
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — colors, type scale, spacing, motion
+   Edit CSS variables here to re-skin the entire site.
+   ================================================================ */
+:root{
+  color-scheme: light;
+  /* --- surfaces & ink (light theme) --- */
+  --bg: #f3efe4;
+  --bg-alt: #e9e2d1;
+  --surface: #fbf9f2;
+  --surface-raised: #ffffff;
+  --ink: #131a17;
+  --ink-soft: #4a554e;
+  /* Darkened from an earlier #7c8880 — that failed WCAG AA (as low as
+     2.86:1 against --bg-alt) for the small mono labels it's used on.
+     #556056 clears 4.5:1 against bg/bg-alt/surface while staying
+     visually "fainter" than --ink-soft. */
+  --ink-faint: #556056;
+  --line: rgba(19,26,23,0.14);
+  --line-strong: rgba(19,26,23,0.28);
+
+  /* --- accent: medical-tech teal --- */
+  --accent: #0e6e62;
+  --accent-strong: #093f38;
+  --accent-soft: #d8ece7;
+  --accent-contrast: #f3efe4;
+  --accent-rgb: 14,110,98;
+
+  /* --- signal colors (data visuals) ---
+     Darkened from initial picks (#c1554a / #9a6b2f / #2b6ea8) — those
+     dropped under 4.5:1 as the small "sensor-part" mono label on white
+     card surfaces and, more noticeably, on the --accent-soft hover
+     state. Hue preserved, value darkened until AA passes in both. */
+  --sig-ecg: #a8463c;
+  --sig-bioz: #0e6e62;
+  --sig-spo2: #24628f;
+  --sig-acoustic: #7e5623;
+  --sig-imu: #6a5a9c;
+
+  /* --- type scale --- */
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+
+  --step-eyebrow: clamp(0.72rem, 0.68rem + 0.1vw, 0.8rem);
+  --step-body: clamp(1rem, 0.95rem + 0.15vw, 1.125rem);
+  --step-lg: clamp(1.25rem, 1.1rem + 0.5vw, 1.6rem);
+  --step-h3: clamp(1.6rem, 1.3rem + 1vw, 2.2rem);
+  --step-h2: clamp(2.2rem, 1.7rem + 2vw, 3.4rem);
+  --step-h1: clamp(2.8rem, 1.9rem + 4.2vw, 6rem);
+  --step-stat: clamp(3rem, 2rem + 5vw, 7rem);
+
+  /* --- spacing --- */
+  --gutter: clamp(1.25rem, 1rem + 1.5vw, 3rem);
+  --section-pad: clamp(4rem, 3rem + 4vw, 8rem);
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  /* --- motion --- */
+  --ease-out: cubic-bezier(.16,.84,.32,1);
+  --ease-in-out: cubic-bezier(.65,.05,.36,1);
+  --dur-s: 0.25s;
+  --dur-m: 0.55s;
+  --dur-l: 1s;
+
+  --shadow-soft: 0 1px 2px rgba(19,26,23,0.06), 0 8px 24px -12px rgba(19,26,23,0.18);
+}
+
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg: #0a1310;
+  --bg-alt: #0f1c17;
+  --surface: #10201a;
+  --surface-raised: #142822;
+  --ink: #eef4f0;
+  --ink-soft: #a9bab1;
+  /* Lightened from #718077 — that failed 4.5:1 against --surface-raised
+     (3.73:1) where sensor-card/BOM/team-role labels sit. */
+  --ink-faint: #8fa097;
+  --line: rgba(255,255,255,0.12);
+  --line-strong: rgba(255,255,255,0.24);
+
+  --accent: #3fd0bd;
+  --accent-strong: #8ff0e2;
+  --accent-soft: rgba(63,208,189,0.14);
+  --accent-contrast: #06120f;
+  --accent-rgb: 63,208,189;
+
+  --sig-ecg: #e08578;
+  --sig-bioz: #3fd0bd;
+  --sig-spo2: #6ba9de;
+  --sig-acoustic: #d1a458;
+  --sig-imu: #a794e0;
+
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -14px rgba(0,0,0,0.6);
+}
+
+*{ box-sizing: border-box; }
+/* overflow-x:hidden on BOTH html and body: the pre-reveal transforms
+   used by [data-reveal="left"/"right"] (see script) intentionally sit
+   translateX(±32px) off their final position until scrolled into view,
+   and body's overflow-x alone did not reliably clip that in testing —
+   setting it on html too closes the gap and was verified with
+   Playwright (window.scrollTo can no longer move scrollX at any
+   tested width, 375–1920px). */
+html{ scroll-behavior: auto; overflow-x: hidden; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out);
+  overflow-x: hidden;
+}
+img{ max-width:100%; display:block; }
+a{ color: inherit; }
+h1,h2,h3,h4{
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.eyebrow{
+  font-family: var(--font-mono);
+  font-size: var(--step-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.eyebrow::before{
+  content:"";
+  width: 22px; height: 1px;
+  background: currentColor;
+  display: inline-block;
+}
+p{ margin: 0 0 1em; color: var(--ink-soft); }
+.visually-hidden{
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip:rect(0 0 0 0); white-space:nowrap;
+}
+.skip-link{
+  position:absolute; left:8px; top:-48px;
+  background:var(--accent); color:var(--accent-contrast);
+  padding:0.6em 1em; border-radius: var(--radius-sm); z-index:200;
+  transition: top var(--dur-s);
+  font-size:0.85rem;
+}
+.skip-link:focus{ top:8px; }
+:focus-visible{ outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The teal focus ring drops to ~1.9:1 against the dark-teal spotlight
+   and contact sections in light mode — below the 3:1 WCAG 1.4.11
+   minimum for a non-text UI indicator. Both of those sections already
+   use a near-cream color for their text, which passes comfortably in
+   both themes, so it's reused here rather than adding a third color. */
+.contact :focus-visible, .spotlight :focus-visible{ outline-color: #f3efe4; }
+
+.wrap{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+section{ position: relative; }
+.section-pad{ padding-top: var(--section-pad); padding-bottom: var(--section-pad); }
+
+/* ---------------------------------------------------------------
+   NAV
+   --------------------------------------------------------------- */
+.site-nav{
+  position: fixed; top:0; left:0; right:0;
+  /* Higher than .mobile-menu (z-index:150) — verified via
+     elementFromPoint testing that the full-screen menu was covering
+     the nav bar entirely, hiding the hamburger's own X/close state
+     with no visible way to close except Escape. Nav (and the brand
+     mark) now stays on top and reachable while the menu is open. */
+  z-index: 200;
+  display:flex; align-items:center; justify-content: space-between;
+  padding: 0.9rem var(--gutter);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-s), background var(--dur-m);
+}
+.site-nav.is-scrolled{ border-color: var(--line); }
+.brand{
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  display:flex; align-items:center; gap:0.55rem;
+  text-decoration:none;
+}
+.brand-mark{
+  width: 34px; height: 34px;
+  flex-shrink:0;
+  object-fit: contain;
+  /* RC_Logo_TBG.png is a fixed dark-charcoal mark on a transparent
+     background — it reads fine on the light theme as-is, but would be
+     nearly invisible against the dark theme's near-black nav. Rather
+     than ask for a second light-mode asset, invert it in dark mode:
+     since it's a single flat dark color with real alpha transparency,
+     invert() cleanly flips it to a light mark with no artifacts. */
+  transition: filter var(--dur-m) var(--ease-out);
+}
+[data-theme="dark"] .brand-mark{ filter: invert(1); }
+.nav-links{
+  display:flex; align-items:center; gap: 1.6rem;
+  list-style:none; margin:0; padding:0;
+}
+.nav-links a{
+  text-decoration:none;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  position: relative;
+  padding: 0.2rem 0;
+  transition: color var(--dur-s);
+}
+.nav-links a:hover{ color: var(--ink); }
+.nav-links a::after{
+  content:""; position:absolute; left:0; right:100%; bottom:-2px; height:1px;
+  background: var(--accent);
+  transition: right var(--dur-m) var(--ease-out);
+}
+.nav-links a:hover::after{ right:0; }
+.nav-right{ display:flex; align-items:center; gap:1rem; }
+.theme-toggle{
+  width: 40px; height: 24px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  position: relative;
+  cursor: pointer;
+  padding:0;
+}
+.theme-toggle::after{
+  content:"";
+  position:absolute; top:2px; left:2px;
+  width: 18px; height:18px; border-radius:50%;
+  background: var(--accent);
+  transition: transform var(--dur-m) var(--ease-out);
+}
+[data-theme="dark"] .theme-toggle::after{ transform: translateX(16px); }
+
+/* Mobile hamburger — two lines that rotate into an X, matches the
+   restrained line-based visual language used elsewhere (eyebrow rules,
+   theme toggle). Hidden above the nav-collapse breakpoint. */
+.nav-hamburger{
+  display:none;
+  width: 34px; height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.hamburger-line{
+  position:absolute; left:7px; right:7px; height:1.5px;
+  background: var(--ink);
+  transition: transform var(--dur-s) var(--ease-out), opacity var(--dur-s) var(--ease-out), top var(--dur-s) var(--ease-out);
+}
+.hamburger-line:first-child{ top: 13px; }
+.hamburger-line:last-child{ top: 20px; }
+.nav-hamburger.is-active .hamburger-line:first-child{ top:16.5px; transform: rotate(45deg); }
+.nav-hamburger.is-active .hamburger-line:last-child{ top:16.5px; transform: rotate(-45deg); }
+
+/* Full-screen mobile menu overlay */
+.mobile-menu{
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--bg);
+  display:flex; flex-direction:column; justify-content:center;
+  padding: 6rem var(--gutter) 3rem;
+  opacity: 0; visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out), visibility 0s linear var(--dur-m);
+}
+.mobile-menu.is-open{
+  opacity: 1; visibility: visible; transform: translateY(0);
+  transition: opacity var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out), visibility 0s;
+}
+.mobile-menu-links{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap: 0.4rem; }
+.mobile-menu-links li{ border-bottom: 1px solid var(--line); }
+.mobile-menu-links li:last-child{ border-bottom:none; margin-top: 1.5rem; }
+.mobile-menu-links a{
+  display:block; padding: 1rem 0;
+  font-family: var(--font-display); font-size: 1.6rem; font-weight:500;
+  text-decoration:none; color: var(--ink);
+}
+.mobile-menu-links a:hover{ color: var(--accent); }
+/* The Contact CTA re-uses .btn inside this list — .btn's own
+   color:var(--accent-contrast) was losing to the rule above on
+   specificity, landing dark text on the dark-teal button fill at
+   2.85:1 (axe-core caught this in the actual rendered mobile menu). */
+.mobile-menu-links a.btn{ color: var(--accent-contrast); }
+.mobile-menu-links a.btn:hover{ color: var(--accent-contrast); }
+body.mobile-menu-open{ overflow: hidden; }
+@media (prefers-reduced-motion: reduce){
+  .mobile-menu{ transition: opacity 0.4s ease, visibility 0s linear 0.4s; transform:none; }
+  .mobile-menu.is-open{ transition: opacity 0.4s ease, visibility 0s; transform:none; }
+}
+
+.btn{
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-sm);
+  padding: 0.75em 1.4em;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  text-decoration:none;
+  display:inline-flex; align-items:center; gap:0.5em;
+  transition: transform var(--dur-s) var(--ease-out), box-shadow var(--dur-s), background var(--dur-s);
+}
+.btn:hover{ box-shadow: var(--shadow-soft); transform: translateY(-1px); }
+.btn.btn-ghost{
+  background: transparent; color: var(--ink); border-color: var(--line-strong);
+}
+.btn.btn-ghost:hover{ border-color: var(--accent); color: var(--accent); }
+
+/* ================================================================
+   1. HERO
+   ================================================================ */
+.hero{
+  min-height: 100vh;
+  display:flex;
+  align-items: flex-end;
+  padding-top: 7rem;
+}
+.hero-grid{
+  width:100%;
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gutter);
+  padding-bottom: 4.5rem;
+}
+.hero-title-col{ grid-column: 1 / 10; }
+.hero-kicker{ margin-bottom: 1.4rem; }
+.hero-title{
+  font-size: var(--step-h1);
+  font-weight: 600;
+  max-width: 15ch;
+}
+.hero-title em{
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+.hero-sub-col{
+  grid-column: 10 / 13;
+  display:flex; flex-direction:column; justify-content:flex-end;
+  border-left: 1px solid var(--line);
+  padding-left: var(--gutter);
+}
+.hero-sub-col p{ font-size: 0.98rem; }
+.hero-actions{
+  grid-column: 1/13;
+  display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;
+  margin-top: 3rem;
+  padding-top: 1.8rem;
+  border-top: 1px solid var(--line);
+}
+.hero-stats{ display:flex; gap: clamp(1.5rem, 3vw, 3.5rem); margin-left:auto; flex-wrap:wrap; }
+.hero-stat b{
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  display:block;
+  color: var(--ink);
+}
+.hero-stat span{
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.hero-bg-word{
+  position:absolute; top: 5vh; left:0; z-index:-1;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: min(32vw, 26rem);
+  color: var(--ink);
+  opacity: 0.035;
+  white-space: nowrap;
+  letter-spacing: -0.03em;
+  user-select:none;
+}
+
+/* ================================================================
+   2. PROBLEM — editorial two-column, pull-stat sidebar
+   ================================================================ */
+.problem{ background: var(--bg-alt); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.problem-grid{
+  display:grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: clamp(2rem, 5vw, 6rem);
+  align-items:start;
+}
+.problem-aside{ position: sticky; top: 6.5rem; }
+.problem-stat{
+  font-family: var(--font-display);
+  font-size: var(--step-stat);
+  line-height: 0.95;
+  color: var(--accent);
+  margin: 0.2em 0;
+}
+.problem-stat-label{ font-size: 0.85rem; color: var(--ink-soft); max-width: 22ch; }
+.problem-body h2{ font-size: var(--step-h2); max-width: 16ch; margin-bottom: 1.2rem; }
+.problem-body .lede{
+  font-size: var(--step-lg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+  max-width: 34ch;
+}
+.problem-facts{
+  margin-top: 2.5rem;
+  display:grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.problem-fact{
+  background: var(--surface);
+  padding: 1.4rem 1.6rem;
+}
+.problem-fact b{
+  display:block;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+.problem-fact p{ font-size: 0.92rem; margin:0; }
+
+/* ================================================================
+   3. SOLUTION — full-bleed asymmetric
+   ================================================================ */
+.solution-grid{
+  display:grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+.solution-copy h2{ font-size: var(--step-h2); margin-bottom: 1rem; max-width: 14ch; }
+.solution-copy .lede{ font-size: var(--step-lg); color: var(--ink); font-family: var(--font-display); font-weight: 400; max-width: 32ch; margin-bottom: 1.6rem;}
+.usecases{ list-style:none; margin: 2rem 0 0; padding:0; display:grid; gap: 0.9rem; }
+.usecases li{
+  display:grid; grid-template-columns: 2rem 1fr; gap: 0.9rem;
+  font-size: 0.95rem; color: var(--ink-soft);
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.usecases li:last-child{ border-bottom:none; }
+.usecases b{ font-family: var(--font-mono); color: var(--accent); font-weight:500; }
+.device-frame{
+  aspect-ratio: 3/4;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background:
+    repeating-linear-gradient(135deg, transparent 0 18px, var(--line) 18px 19px),
+    var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  position: relative;
+  overflow:hidden;
+}
+.device-frame span.frame-label{
+  position:absolute; bottom: 1rem; left: 1rem;
+  font-family: var(--font-mono); font-size:0.72rem; color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+
+/* ================================================================
+   4. SENSOR STACK — staggered offset grid, animated SVG signals
+   ================================================================ */
+.sensors{ background: var(--surface); }
+.sensors-head{ max-width: 46ch; margin-bottom: 3.5rem; }
+.sensors-head h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; }
+.sensor-grid{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.sensor-card{
+  background: var(--surface-raised);
+  padding: 1.8rem 1.5rem 2rem;
+  display:flex; flex-direction:column; gap: 1rem;
+  transition: background var(--dur-m);
+  cursor: default;
+}
+.sensor-card:hover{ background: var(--accent-soft); }
+.sensor-num{ font-family: var(--font-mono); font-size:0.72rem; color: var(--ink-faint); }
+.sensor-card h3{ font-size: 1.05rem; font-family: var(--font-body); font-weight:700; }
+.sensor-part{ font-family: var(--font-mono); font-size: 0.7rem; color: var(--sig-color, var(--accent)); letter-spacing: 0.03em; }
+.sensor-viz{ width:100%; height: 58px; }
+.sensor-viz svg{ width:100%; height:100%; overflow:visible; }
+.sensor-viz path{
+  fill:none; stroke-width: 1.6; stroke-linecap:round; stroke-linejoin:round;
+}
+.sensor-detects, .sensor-why{ font-size: 0.85rem; margin:0; }
+.sensor-why{ color: var(--ink); font-weight:500; }
+.sensor-why .lbl{ display:block; font-family: var(--font-mono); font-size:0.66rem; color: var(--ink-faint); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem; }
+
+/* ================================================================
+   5. BIOIMPEDANCE SPOTLIGHT — full-bleed dark contrast band
+   ================================================================ */
+.spotlight{
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+  overflow:hidden;
+  position: relative;
+}
+[data-theme="dark"] .spotlight{ background: #06120f; }
+.spotlight .eyebrow{ color: var(--accent-strong-contrast, #bfe6df); opacity:0.9; }
+[data-theme="dark"] .spotlight .eyebrow{ color: var(--sig-bioz); }
+.spotlight-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,5rem); align-items:center;
+}
+.spotlight h2{
+  font-size: var(--step-h2); color: #f3efe4; max-width: 14ch; margin: 0.8rem 0 1.4rem;
+}
+[data-theme="dark"] .spotlight h2{ color: var(--ink); }
+.spotlight p{ color: rgba(243,239,228,0.78); }
+[data-theme="dark"] .spotlight p{ color: var(--ink-soft); }
+.spotlight-compare{
+  margin-top: 1.6rem;
+  font-size: 0.85rem;
+  border-top: 1px solid rgba(243,239,228,0.25);
+  padding-top: 1.2rem;
+  color: rgba(243,239,228,0.7);
+}
+[data-theme="dark"] .spotlight-compare{ border-color: var(--line); color: var(--ink-faint); }
+.spotlight-compare b{ color: #f3efe4; font-weight:600; }
+[data-theme="dark"] .spotlight-compare b{ color: var(--ink); }
+.bioz-chart{
+  width:100%; aspect-ratio: 4/3;
+  position:relative;
+}
+.bioz-chart svg{ width:100%; height:100%; }
+.bioz-caption{
+  display:flex; justify-content:space-between; font-family: var(--font-mono);
+  font-size: 0.68rem; color: rgba(243,239,228,0.55); margin-top: 0.6rem;
+}
+[data-theme="dark"] .bioz-caption{ color: var(--ink-faint); }
+
+/* ================================================================
+   6. COMPARATIVE LANDSCAPE
+   ================================================================ */
+.landscape{ background: var(--bg); }
+.landscape-head{ max-width: 50ch; margin-bottom: 3rem; }
+.landscape-head h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; }
+/* JUDGMENT CALL: rather than squeezing the comparator table's columns
+   down to unreadable widths on narrow screens, it stays horizontally
+   scrollable at a legible column width and gets an explicit affordance
+   instead — a right-edge fade (hidden once you've scrolled to the end)
+   plus a plain-text hint. .compare-wrap is the non-scrolling positioning
+   context for the fade; .compare-scroll is what actually scrolls. */
+.compare-wrap{ position: relative; }
+.compare-scroll{ overflow-x: auto; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter); }
+.compare-fade{
+  position:absolute; top:0; right:0; bottom:0; width: 48px;
+  background: linear-gradient(to right, transparent, var(--bg));
+  pointer-events:none; opacity:1; transition: opacity var(--dur-s) var(--ease-out);
+}
+.compare-fade.is-hidden{ opacity:0; }
+.compare-hint{
+  font-family: var(--font-mono); font-size:0.72rem; color: var(--ink-faint);
+  margin: 0.7rem 0 0; display:none;
+}
+@media (max-width: 760px){ .compare-hint{ display:block; } }
+table.compare{
+  width:100%; border-collapse: collapse; min-width: 760px;
+  font-size: 0.9rem;
+}
+table.compare caption{ text-align:left; font-size:0.8rem; color:var(--ink-faint); margin-bottom:0.8rem; }
+table.compare th, table.compare td{
+  text-align:left; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+table.compare thead th{
+  font-family: var(--font-mono); font-weight:500; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;
+  color: var(--ink-faint); border-bottom: 1px solid var(--line-strong);
+}
+table.compare tbody th{ color: var(--ink-soft); font-weight:500; }
+table.compare td.yes{ color: var(--accent); font-weight:600; }
+table.compare td.no{ color: var(--ink-faint); }
+table.compare .col-recoverpath{ background: var(--accent-soft); position:relative; }
+table.compare thead th.col-recoverpath{ color: var(--accent); }
+table.compare .col-recoverpath::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:2px; background: var(--accent);
+}
+.landscape-position{
+  margin-top: 2rem; font-family: var(--font-display); font-size: var(--step-lg); font-weight:400;
+  max-width: 42ch; color: var(--ink);
+}
+.landscape-position em{ font-style:normal; color: var(--accent); font-weight:600; }
+
+/* ================================================================
+   7. TECHNOLOGY & PROTOTYPE — pinned exploded-view diagram
+   ================================================================ */
+.prototype{ background: var(--bg-alt); border-top: 1px solid var(--line); }
+.prototype-intro{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(2rem,5vw,5rem); margin-bottom: 3rem; }
+.prototype-intro h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; }
+.prototype-note{ font-size: 0.88rem; color: var(--ink-faint); align-self:end; }
+.prototype-stage{
+  height: 100vh;
+  position: relative;
+  display:flex; align-items:center; justify-content:center;
+  overflow: hidden;
+}
+.prototype-progress{
+  position:absolute; left: var(--gutter); top: 50%; transform: translateY(-50%);
+  width: 2px; height: 220px; background: var(--line-strong);
+  z-index:5;
+}
+.prototype-progress-fill{
+  position:absolute; left:0; top:0; width:100%; height:0%;
+  background: var(--accent);
+  transform-origin: top;
+}
+.proto-visual{
+  position: relative;
+  /* Fixed design canvas, NOT viewport-relative. The exploded parts use
+     fixed pixel offsets (data-target-x/y, authored against this exact
+     640x520 canvas) — if this box were sized in vw units instead, its
+     width would shrink independently of those offsets and parts/labels
+     would explode past the box edge at narrow viewports. Responsive
+     sizing is handled entirely by scaling this whole box down with
+     `transform: scale()` in the media queries below, which shrinks the
+     canvas and the pixel offsets together, in proportion. */
+  width: 640px;
+  height: 520px;
+}
+.proto-part{
+  position:absolute;
+  left:50%; top:50%;
+  transform: translate(-50%,-50%);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+}
+.proto-part .part-fill{ position:absolute; inset:0; border-radius: inherit; opacity:0.14; }
+.proto-band{ width: 460px; height: 64px; border-radius: 32px; z-index:1; }
+.proto-housing{ width: 220px; height: 150px; z-index:2; }
+.proto-pcb{ width: 150px; height: 100px; z-index:3; }
+.proto-ecg{ width: 84px; height: 84px; border-radius:50%; z-index:4; }
+.proto-spo2{ width: 76px; height: 76px; border-radius:50%; z-index:4; }
+.proto-mic{ width: 60px; height: 60px; border-radius:50%; z-index:4; }
+.proto-imu{ width: 68px; height: 68px; border-radius:50%; z-index:4; }
+.proto-battery{ width: 120px; height: 66px; z-index:3; }
+.proto-part code{
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--ink-faint);
+}
+.proto-label{
+  position:absolute;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  opacity: 0;
+  display:flex; align-items:center; gap:0.5rem;
+}
+.proto-label b{ color: var(--ink); font-family: var(--font-body); font-weight:600; font-size:0.8rem; }
+.proto-label .dot{ width:6px; height:6px; border-radius:50%; background: var(--accent); flex-shrink:0; }
+.proto-closed-hint{
+  position:absolute; bottom: 2rem; left:50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size:0.72rem; color: var(--ink-faint);
+  display:flex; align-items:center; gap:0.5rem;
+  opacity: 1;
+  transition: opacity var(--dur-m);
+}
+.prototype-stage.is-scrolling .proto-closed-hint{ opacity:0; }
+.proto-scroll-icon{ width:14px; height:22px; border:1.4px solid var(--ink-faint); border-radius:8px; position:relative; }
+.proto-scroll-icon::after{
+  content:""; position:absolute; top:4px; left:50%; width:2px; height:5px; background:var(--ink-faint);
+  transform: translateX(-50%);
+  animation: scrollDot 1.6s infinite ease;
+}
+@keyframes scrollDot{ 0%{ opacity:1; top:4px;} 60%{opacity:0; top:12px;} 100%{opacity:0; top:4px;} }
+
+/* Visible legend shown in place of the floating labels below 700px
+   (see JUDGMENT CALL comment above the media query that toggles this). */
+.proto-legend{
+  display:none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  margin-top: -1px;
+}
+.proto-legend-item{ background: var(--surface); padding: 1rem 1.1rem; display:flex; gap:0.7rem; }
+.proto-legend-item .dot{ width:8px; height:8px; border-radius:50%; margin-top:0.3rem; flex-shrink:0; }
+.proto-legend-item b{ display:block; font-size:0.85rem; }
+.proto-legend-item span{ font-size:0.78rem; color: var(--ink-faint); }
+@media (max-width: 860px){ .proto-legend{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px){ .proto-legend{ grid-template-columns: 1fr; } }
+
+.bom-strip{
+  margin-top: 4rem;
+  display:grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+}
+.bom-item{ background: var(--surface); padding: 1.1rem 1.3rem; }
+.bom-item b{ display:block; font-size:0.85rem; margin-bottom:0.3rem; }
+.bom-item span{ font-size:0.78rem; color: var(--ink-faint); }
+
+/* ================================================================
+   8. CLINICAL WORKFLOW — horizontal scroll-progress timeline
+   ================================================================ */
+.workflow{ background: var(--surface); }
+.workflow-head{ max-width: 46ch; margin-bottom: 3.5rem; }
+.workflow-head h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; }
+.timeline{ position: relative; padding-top: 1rem; }
+.timeline-track{
+  position:absolute; top: 2.1rem; left: 0; right:0; height: 2px; background: var(--line);
+}
+.timeline-track-fill{
+  position:absolute; top:0; left:0; height:100%; width:0%; background: var(--accent);
+  transition: width 0.1s linear;
+}
+.timeline-steps{
+  display:grid; grid-template-columns: repeat(5,1fr); gap: 1.5rem; position:relative;
+}
+.timeline-step{
+  padding-top: 3rem;
+  /* Dimming for "not yet reached" steps used to be a flat opacity:0.4
+     on the whole block — that multiplies against text color too, and
+     axe-core flagged every descendant (step-num/h3/p) as failing
+     4.5:1 as a result. Using --ink-faint (already AA-checked) for the
+     inactive text color instead keeps the same "dimmed" read without
+     an unreadable state. */
+  color: var(--ink-faint);
+  transform: translateY(6px);
+  transition: color var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out);
+}
+.timeline-step.is-active{ color: var(--ink); transform: translateY(0); }
+.timeline-dot{
+  position:absolute; top: 1.55rem; left:0;
+  width: 12px; height:12px; border-radius:50%;
+  background: var(--surface); border: 2px solid var(--line-strong);
+  transition: background var(--dur-s), border-color var(--dur-s), transform var(--dur-s);
+}
+.timeline-step.is-active .timeline-dot{ background: var(--accent); border-color: var(--accent); transform: scale(1.15); }
+.timeline-step .step-num{ font-family: var(--font-mono); font-size:0.7rem; color: inherit; }
+.timeline-step.is-active .step-num{ color: var(--accent); }
+.timeline-step h3{ font-size: 1.05rem; font-family: var(--font-body); font-weight:700; margin: 0.4rem 0 0.5rem; color: inherit; }
+.timeline-step p{ font-size: 0.85rem; color: inherit; }
+@media (max-width: 860px){
+  .timeline-steps{ grid-template-columns: 1fr; gap: 2.2rem; }
+  .timeline-track{ top:0; left: 5px; right:auto; width:2px; height:100%; }
+  .timeline-track-fill{ width:100%; height:0%; }
+  .timeline-step{ padding-top:0; padding-left: 2rem; }
+  .timeline-dot{ top: 0.35rem; left:0; }
+}
+
+/* ================================================================
+   9. EVIDENCE & ROADMAP
+   ================================================================ */
+.evidence{ background: var(--bg-alt); border-top:1px solid var(--line); }
+.evidence-grid{ display:grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2rem,5vw,5rem); }
+.evidence-copy h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; max-width:14ch; }
+.evidence-list{ list-style:none; margin:0; padding:0; display:grid; gap: 1.4rem; }
+.evidence-list li{ padding-bottom:1.4rem; border-bottom:1px solid var(--line); }
+.evidence-list li:last-child{ border-bottom:none; padding-bottom:0; }
+.evidence-list b{ display:block; font-size:0.95rem; margin-bottom:0.35rem; }
+.evidence-list p{ font-size:0.87rem; margin:0; }
+.evidence-list .cite{ font-family: var(--font-mono); font-size:0.7rem; color: var(--ink-faint); }
+.roadmap{ border-left: 1px solid var(--line); padding-left: clamp(1.5rem,3vw,3rem); }
+.roadmap .stage-badge{
+  display:inline-flex; align-items:center; gap:0.5rem;
+  font-family: var(--font-mono); font-size:0.72rem; color: var(--accent);
+  background: var(--accent-soft); padding: 0.4em 0.8em; border-radius: 999px; margin-bottom:1.2rem;
+}
+.roadmap .stage-badge::before{ content:""; width:6px; height:6px; border-radius:50%; background: var(--accent); }
+.roadmap p.roadmap-lede{ font-size: 0.98rem; color: var(--ink); }
+.milestones{ list-style:none; margin: 1.6rem 0 0; padding:0; counter-reset: milestone; }
+.milestones li{
+  counter-increment: milestone;
+  position:relative; padding-left: 2.4rem; margin-bottom:1.1rem; font-size:0.92rem; color: var(--ink-soft);
+}
+.milestones li::before{
+  content: counter(milestone, decimal-leading-zero);
+  position:absolute; left:0; top:0;
+  font-family: var(--font-mono); font-size:0.75rem; color: var(--accent);
+  border: 1px solid var(--line-strong); border-radius:50%;
+  width: 1.6rem; height:1.6rem; display:flex; align-items:center; justify-content:center;
+}
+.clinical-note{ margin-top: 2rem; font-size:0.85rem; color: var(--ink-faint); font-style: italic; }
+
+/* ================================================================
+   10. TEAM / STORY
+   ================================================================ */
+.team{ background: var(--surface); }
+.team-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,5rem); align-items:start; }
+.team-copy h2{ font-size: var(--step-h2); margin: 0.6rem 0 1.2rem; max-width:14ch; }
+.founder-note{
+  font-family: var(--font-display); font-weight:400; font-size: var(--step-lg);
+  color: var(--ink); max-width: 34ch;
+}
+.founder-note::before{ content:"\201C"; color: var(--accent); }
+.team-roles{ list-style:none; margin: 2.2rem 0 0; padding:0; display:grid; grid-template-columns: repeat(2,1fr); gap: 1px; background: var(--line); border:1px solid var(--line); }
+.team-role{ background: var(--surface-raised); padding: 1.3rem 1.4rem; }
+.team-role .avatar{
+  width: 40px; height:40px; border-radius:50%;
+  background: var(--accent-soft); color: var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family: var(--font-mono); font-size:0.72rem; margin-bottom: 0.8rem;
+}
+.team-role b{ display:block; font-size:0.9rem; }
+.team-role span{ font-size:0.8rem; color: var(--ink-faint); }
+
+/* ================================================================
+   11. CONTACT — understated, single primary action
+   ================================================================ */
+.contact{ background: var(--accent-strong); color: var(--accent-contrast); text-align:center; }
+[data-theme="dark"] .contact{ background:#06120f; }
+.contact h2{ font-size: var(--step-h2); color:#f3efe4; max-width: 20ch; margin: 0 auto 1rem; }
+[data-theme="dark"] .contact h2{ color: var(--ink); }
+.contact p{ color: rgba(243,239,228,0.75); max-width: 42ch; margin: 0 auto 2.2rem; }
+[data-theme="dark"] .contact p{ color: var(--ink-soft); }
+.contact .btn{ background:#f3efe4; color: var(--accent-strong); border-color:#f3efe4; }
+[data-theme="dark"] .contact .btn{ background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+.contact-email{
+  margin-top: 1.6rem; font-family: var(--font-mono); font-size:0.85rem;
+  color: rgba(243,239,228,0.65);
+}
+[data-theme="dark"] .contact-email{ color: var(--ink-faint); }
+.contact-email a{ text-decoration: underline; color: inherit; }
+
+footer.site-footer{
+  padding: 2rem var(--gutter);
+  display:flex; justify-content:space-between; align-items:center;
+  font-size: 0.78rem; color: var(--ink-faint);
+  border-top: 1px solid var(--line);
+  flex-wrap:wrap; gap:1rem;
+}
+
+/* ---------------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------------- */
+@media (max-width: 980px){
+  .nav-links{ display:none; }
+  .nav-hamburger{ display:block; }
+  .nav-contact-btn{ display:none; }
+  .hero-title-col{ grid-column: 1/13; }
+  .hero-sub-col{ grid-column:1/13; border-left:none; padding-left:0; margin-top:1.5rem; }
+  .hero-stats{ margin-left:0; }
+  .problem-grid, .solution-grid, .spotlight-grid, .prototype-intro, .evidence-grid, .team-grid{
+    grid-template-columns: 1fr;
+  }
+  .problem-aside{ position:static; margin-bottom: 2rem; }
+  .sensor-grid{ grid-template-columns: repeat(2,1fr); }
+  .roadmap{ border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:2rem; margin-top:1rem; }
+  .team-roles, .bom-strip, .problem-facts{ grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 620px){
+  .sensor-grid{ grid-template-columns: 1fr; }
+  .team-roles, .bom-strip, .problem-facts{ grid-template-columns: 1fr; }
+  .hero-actions{ flex-direction:column; align-items:flex-start; }
+}
+/* Graduated scale steps keep the 640x520 canvas (and the fixed pixel
+   explode-offsets inside it) comfortably within the viewport at every
+   width, instead of a single jump that undershoots some sizes and
+   overshoots others. */
+@media (max-width: 860px){
+  .proto-visual{ transform: scale(0.86); }
+}
+@media (max-width: 700px){
+  .proto-visual{ transform: scale(0.68); }
+}
+@media (max-width: 600px){
+  .proto-visual{ transform: scale(0.58); }
+}
+@media (max-width: 500px){
+  .proto-visual{ transform: scale(0.5); }
+}
+@media (max-width: 428px){
+  .proto-visual{ transform: scale(0.44); }
+}
+@media (max-width: 375px){
+  .proto-visual{ transform: scale(0.4); }
+}
+
+/* JUDGMENT CALL: measured with real layout (not just reasoning about
+   the CSS) using the labels' actual rendered width against the actual
+   room available to their left/right of each part's anchor point —
+   the floating labels run off-screen anywhere from ~700px up to
+   ~1024px viewport width (e.g. "Adjustable chest band — comfort &
+   long-term wear" alone needs ~340px of unwrapped horizontal room,
+   which isn't available at these widths even after the canvas scales
+   down, since the *available margin* shrinks faster than the label
+   text does). Rather than truncating copy or fighting collision math
+   across every width, floating labels are swapped for a simple static
+   legend (.proto-legend) below the diagram for this whole range — same
+   information, plain reading order, zero positioning math, verified
+   clean at 701/768/860/980/1024px. Confirmed clean above 1024px. */
+@media (max-width: 1024px){
+  .proto-label{ display:none; }
+  .proto-legend{ display:grid; }
+}
+
+/* ---------------------------------------------------------------
+   REDUCED MOTION — genuinely simplified, not just "disabled"
+   --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce){
+  *{ scroll-behavior: auto !important; }
+}
+.reduced-motion .proto-part,
+.reduced-motion .proto-label,
+.reduced-motion [data-reveal]{
+  transition: opacity 0.4s ease !important;
+}
+.reduced-motion .timeline-step{
+  transition: color 0.4s ease !important;
+}
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<!-- #main below carries tabindex="-1" so this skip link actually moves
+     keyboard focus to the landmark, not just the scroll position. -->
+
+
+<!-- ============================================================
+     NAV
+     ============================================================ -->
+<nav class="site-nav" id="siteNav" aria-label="Primary">
+  <a href="#top" class="brand"><img src="RC_Logo_TBG.png" class="brand-mark" alt="" aria-hidden="true">RecoverPath</a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#sensors">Sensors</a></li>
+    <li><a href="#prototype">Technology</a></li>
+    <li><a href="#workflow">Workflow</a></li>
+    <li><a href="#evidence">Evidence</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" aria-pressed="false" aria-label="Toggle dark mode"></button>
+    <a href="#contact" class="btn nav-contact-btn">Contact</a>
+    <button class="nav-hamburger" id="navHamburger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span class="hamburger-line" aria-hidden="true"></span>
+      <span class="hamburger-line" aria-hidden="true"></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <ul class="mobile-menu-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#sensors">Sensors</a></li>
+    <li><a href="#prototype">Technology</a></li>
+    <li><a href="#workflow">Workflow</a></li>
+    <li><a href="#evidence">Evidence</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#contact" class="btn" style="font-family:var(--font-body); font-size:0.9rem; display:inline-flex;">Contact the team</a></li>
+  </ul>
+</div>
+
+<main id="main" tabindex="-1">
+
+<!-- ============================================================
+     1. HERO
+     Edit headline, one-liner and stats here.
+     ============================================================ -->
+<section class="hero" id="top">
+  <div class="hero-bg-word" aria-hidden="true">Recover</div>
+  <div class="wrap hero-grid">
+    <div class="hero-title-col" data-reveal="up">
+      <p class="eyebrow">Post-discharge monitoring · chest-worn</p>
+      <h1 class="hero-title">Catch heart failure <em>before</em> it becomes a readmission.</h1>
+    </div>
+    <div class="hero-sub-col" data-reveal="up" data-reveal-delay="0.15">
+      <p>RecoverPath is a chest strap combining bioimpedance, ECG, SpO2, acoustic and activity sensing to flag fluid buildup and respiratory decline days before a patient feels it — while there's still time to act at home.</p>
+      <a href="#prototype" class="btn btn-ghost" style="align-self:flex-start;">See the prototype ↓</a>
+    </div>
+    <div class="hero-actions" data-reveal="up" data-reveal-delay="0.25">
+      <a href="#sensors" class="btn">See how it works</a>
+      <a href="#contact" class="btn btn-ghost">Contact the team</a>
+      <div class="hero-stats">
+        <div class="hero-stat"><b>6.7M</b><span>Americans living with heart failure</span></div>
+        <div class="hero-stat"><b>1 in 4</b><span>HF patients readmitted within 30 days</span></div>
+        <div class="hero-stat"><b>5</b><span>Sensing modalities in one strap</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. PROBLEM
+     ============================================================ -->
+<section class="problem section-pad" id="problem">
+  <div class="wrap problem-grid">
+    <aside class="problem-aside" data-reveal="fade">
+      <p class="eyebrow">The clinical problem</p>
+      <p class="problem-stat">1 in 4</p>
+      <p class="problem-stat-label">heart-failure patients are readmitted to the hospital within 30 days of discharge.</p>
+    </aside>
+    <div class="problem-body">
+      <h2 data-reveal="up">Deterioration is invisible — until it isn't.</h2>
+      <p class="lede" data-reveal="up" data-reveal-delay="0.1">Heart failure is the leading cause of hospital readmission in the United States. COPD patients face a similar post-discharge risk. Between hospital visits, fluid buildup, low oxygen, arrhythmia, and worsening cough develop quietly — invisible to the patient until they're back in crisis.</p>
+      <p data-reveal="up" data-reveal-delay="0.15">Hospitals feel this too: CMS's Hospital Readmissions Reduction Program penalizes excess readmission rates, so the incentive to catch decline earlier is clinical <em>and</em> financial. RecoverPath exists to close the monitoring gap between discharge and the next crisis.</p>
+      <div class="problem-facts" data-reveal="up" data-reveal-delay="0.2">
+        <div class="problem-fact"><b>Heart failure</b><p>Affects roughly 6.7 million Americans; a leading driver of avoidable hospital readmissions.</p></div>
+        <div class="problem-fact"><b>COPD</b><p>Shares a near-identical post-discharge risk pattern — slow decline, sudden crisis.</p></div>
+        <div class="problem-fact"><b>The gap</b><p>Most deterioration is only visible in hindsight, once a patient is already back in the ER.</p></div>
+        <div class="problem-fact"><b>The cost</b><p>CMS penalizes hospitals for excess readmissions, aligning clinical and financial motivation to intervene earlier.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     3. SOLUTION
+     ============================================================ -->
+<section class="solution section-pad" id="solution">
+  <div class="wrap solution-grid">
+    <div class="solution-copy">
+      <p class="eyebrow" data-reveal="up">The RecoverPath solution</p>
+      <h2 data-reveal="up" data-reveal-delay="0.05">One strap. Five signals. Worn where it matters.</h2>
+      <p class="lede" data-reveal="up" data-reveal-delay="0.1">RecoverPath is a chest strap for post-discharge, at-home monitoring — built to detect pulmonary edema and respiratory deterioration days before symptoms are noticeable, giving clinicians time to intervene before a hospital visit is needed.</p>
+      <p data-reveal="up" data-reveal-delay="0.15">The chest is the most direct, stable place to read thoracic fluid, heart electrical activity, and lung sound together — one wearable location instead of several, which matters for real-world adherence after discharge. It's the only wearable combining bioimpedance, ECG, SpO2, acoustic sensing, and activity in a single strap.</p>
+      <ul class="usecases" data-reveal="up" data-reveal-delay="0.2">
+        <li><b>01</b><span>Detect fluid buildup days before shortness of breath sets in.</span></li>
+        <li><b>02</b><span>Flag new arrhythmia and dropping oxygen while the patient is still at home.</span></li>
+        <li><b>03</b><span>Surface worsening cough and falling activity as early functional-decline signals.</span></li>
+        <li><b>04</b><span>Route meaningful changes — not raw data — to the care team that can act on them.</span></li>
+      </ul>
+    </div>
+    <div data-reveal="scale">
+      <div class="device-frame" id="deviceRenderPlaceholder" role="img" aria-label="Placeholder for RecoverPath chest strap product render — replace with CAD render or photo">
+        <span class="frame-label">[ CAD RENDER / PRODUCT PHOTO — id: deviceRenderPlaceholder ]</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. SENSOR STACK
+     Each .sensor-card has an inline SVG "signal visual" —
+     replace path data or swap in a real chart later.
+
+     TODO (content decision, not made here): the source content brief's
+     Bill of Materials includes a MAX30205 body-temperature sensor
+     ("infection flag") that is NOT currently represented as its own
+     card in this 5-sensor section — it's mentioned only in the BOM
+     strip further down (see .bom-strip). Site owner should decide:
+       (a) promote it to a 6th sensor card here,
+       (b) leave it as BOM-only detail, or
+       (c) fold in a one-line mention elsewhere (e.g. evidence/roadmap).
+     Not adding a card or copy for it without that decision.
+     ============================================================ -->
+<section class="sensors section-pad" id="sensors">
+  <div class="wrap">
+    <div class="sensors-head">
+      <p class="eyebrow" data-reveal="up">Sensor stack &amp; biomarkers</p>
+      <h2 data-reveal="up" data-reveal-delay="0.05">Five sensors, one continuous picture.</h2>
+      <p data-reveal="up" data-reveal-delay="0.1">Each sensor watches a different early-warning sign of decompensation — together, they build a fuller picture than any single signal could.</p>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="sensor-grid">
+
+      <article class="sensor-card" data-sensor-index="0" style="--sig-color:var(--sig-ecg)">
+        <div class="sensor-num">01 / 05</div>
+        <div>
+          <h3>ECG</h3>
+          <span class="sensor-part">MAX30001</span>
+        </div>
+        <div class="sensor-viz" aria-hidden="true">
+          <svg viewBox="0 0 220 58" preserveAspectRatio="none">
+            <path class="signal-path" data-sig="ecg" stroke="var(--sig-ecg)" d="M0,30 L28,30 L34,10 L40,48 L46,30 L60,30 L64,26 L68,30 L92,30 L98,10 L104,48 L110,30 L124,30 L128,26 L132,30 L156,30 L162,10 L168,48 L174,30 L188,30 L192,26 L196,30 L220,30"/>
+          </svg>
+        </div>
+        <p class="sensor-detects"><strong>Detects:</strong> heart rhythm, arrhythmia, AFib.</p>
+        <p class="sensor-why"><span class="lbl">Why it matters</span>Atrial fibrillation triggers roughly 25–30% of heart-failure decompensation episodes.</p>
+      </article>
+
+      <article class="sensor-card" data-sensor-index="1" style="--sig-color:var(--sig-bioz)">
+        <div class="sensor-num">02 / 05</div>
+        <div>
+          <h3>Bioimpedance</h3>
+          <span class="sensor-part">MAX30001</span>
+        </div>
+        <div class="sensor-viz" aria-hidden="true">
+          <svg viewBox="0 0 220 58" preserveAspectRatio="none">
+            <path class="signal-path" data-sig="bioz" stroke="var(--sig-bioz)" d="M0,46 C40,44 50,20 90,16 C130,12 150,26 180,20 C195,17 205,14 220,10"/>
+          </svg>
+        </div>
+        <p class="sensor-detects"><strong>Detects:</strong> thoracic (lung) fluid accumulation.</p>
+        <p class="sensor-why"><span class="lbl">Why it matters</span>The flagship HF signal — fluid builds 3–5 days before a patient notices shortness of breath.</p>
+      </article>
+
+      <article class="sensor-card" data-sensor-index="2" style="--sig-color:var(--sig-spo2)">
+        <div class="sensor-num">03 / 05</div>
+        <div>
+          <h3>SpO2 &amp; heart rate</h3>
+          <span class="sensor-part">MAX30102</span>
+        </div>
+        <div class="sensor-viz" aria-hidden="true">
+          <svg viewBox="0 0 220 58" preserveAspectRatio="none">
+            <path class="signal-path" data-sig="spo2" stroke="var(--sig-spo2)" d="M0,16 C30,16 30,16 55,16 C60,30 66,42 72,42 C78,42 82,20 90,18 C110,16 110,16 130,16 C135,28 141,40 147,40 C153,40 157,20 165,18 C185,16 185,16 220,16"/>
+          </svg>
+        </div>
+        <p class="sensor-detects"><strong>Detects:</strong> oxygen saturation and heart rate.</p>
+        <p class="sensor-why"><span class="lbl">Why it matters</span>Oxygen saturation drops as the lungs fill with fluid — an early warning sign.</p>
+      </article>
+
+      <article class="sensor-card" data-sensor-index="3" style="--sig-color:var(--sig-acoustic)">
+        <div class="sensor-num">04 / 05</div>
+        <div>
+          <h3>Acoustic</h3>
+          <span class="sensor-part">MAX4466</span>
+        </div>
+        <div class="sensor-viz" aria-hidden="true">
+          <svg viewBox="0 0 220 58" preserveAspectRatio="none">
+            <path class="signal-path" data-sig="acoustic" stroke="var(--sig-acoustic)" d="M0,29 L10,29 L14,8 L18,50 L22,15 L26,40 L30,29 L60,29 L100,29 L104,20 L108,42 L112,10 L116,46 L120,29 L160,29 L200,29 L204,18 L208,44 L212,12 L216,48 L220,29"/>
+          </svg>
+        </div>
+        <p class="sensor-detects"><strong>Detects:</strong> cough frequency, wheeze, crackles.</p>
+        <p class="sensor-why"><span class="lbl">Why it matters</span>Flags respiratory deterioration and COPD comorbidity from sound alone.</p>
+      </article>
+
+      <article class="sensor-card" data-sensor-index="4" style="--sig-color:var(--sig-imu)">
+        <div class="sensor-num">05 / 05</div>
+        <div>
+          <h3>Activity (IMU)</h3>
+          <span class="sensor-part">MPU-6050</span>
+        </div>
+        <div class="sensor-viz" aria-hidden="true">
+          <svg viewBox="0 0 220 58" preserveAspectRatio="none">
+            <path class="signal-path" data-sig="imu" stroke="var(--sig-imu)" fill="none" d="M4,48 L4,48 M4,48 L4,48" stroke-width="0"/>
+            <g class="imu-bars" stroke="var(--sig-imu)" stroke-width="6" stroke-linecap="round">
+              <line x1="10" y1="48" x2="10" y2="20"/>
+              <line x1="32" y1="48" x2="32" y2="10"/>
+              <line x1="54" y1="48" x2="54" y2="30"/>
+              <line x1="76" y1="48" x2="76" y2="38"/>
+              <line x1="98" y1="48" x2="98" y2="42"/>
+              <line x1="120" y1="48" x2="120" y2="16"/>
+              <line x1="142" y1="48" x2="142" y2="26"/>
+              <line x1="164" y1="48" x2="164" y2="34"/>
+              <line x1="186" y1="48" x2="186" y2="12"/>
+              <line x1="208" y1="48" x2="208" y2="40"/>
+            </g>
+          </svg>
+        </div>
+        <p class="sensor-detects"><strong>Detects:</strong> activity, posture, sleep patterns.</p>
+        <p class="sensor-why"><span class="lbl">Why it matters</span>Functional decline — less movement, restless sleep — often precedes acute events by days.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. BIOIMPEDANCE SPOTLIGHT — full-bleed contrast band
+     ============================================================ -->
+<section class="spotlight section-pad" id="bioimpedance">
+  <div class="wrap spotlight-grid">
+    <div data-reveal="up">
+      <p class="eyebrow">The flagship signal</p>
+      <h2>Fluid in the lungs, measured before it's felt.</h2>
+      <p>Pulmonary edema is the direct cause of most heart-failure readmissions — and it's measurable days before a patient feels short of breath. Thoracic bioimpedance sends a tiny, imperceptible electrical signal across the chest and measures how easily it passes through tissue: fluid conducts electricity differently than healthy lung tissue, so the trend line reveals buildup before symptoms do.</p>
+      <div class="spotlight-compare">Very few consumer or wearable devices attempt this. <b>CardioMEMS</b> is the closest existing comparator — but it's an invasive, surgically implanted pulmonary-artery sensor. RecoverPath aims for a comparable early-warning signal <b>non-invasively</b>, from a chest strap.</div>
+    </div>
+    <div data-reveal="draw">
+      <div class="bioz-chart" role="img" aria-label="Illustrative chart of thoracic bioimpedance trending downward over five days as fluid accumulates, crossing an alert threshold before the patient reports symptoms">
+        <svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="biozFade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--sig-bioz)" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="var(--sig-bioz)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g stroke="rgba(255,255,255,0.15)" stroke-width="1">
+            <line x1="0" y1="60" x2="420" y2="60"/>
+            <line x1="0" y1="140" x2="420" y2="140"/>
+            <line x1="0" y1="220" x2="420" y2="220"/>
+          </g>
+          <line x1="0" y1="150" x2="420" y2="150" stroke="#e0a458" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.8"/>
+          <text x="4" y="142" fill="#e0a458" font-family="IBM Plex Mono, monospace" font-size="10">alert threshold</text>
+          <path id="biozAreaPath" d="M0,60 C60,64 90,72 130,90 C180,112 220,140 260,168 C310,200 350,215 420,222 L420,320 L0,320 Z" fill="url(#biozFade)" opacity="0"/>
+          <path id="biozLinePath" d="M0,60 C60,64 90,72 130,90 C180,112 220,140 260,168 C310,200 350,215 420,222" fill="none" stroke="var(--sig-bioz)" stroke-width="2.5"/>
+          <circle id="biozAlertDot" cx="266" cy="170" r="0" fill="var(--sig-bioz)"/>
+        </svg>
+        <div class="bioz-caption"><span>DAY 0 — discharge</span><span>DAY 5 — fluid trend crosses threshold</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. COMPARATIVE LANDSCAPE
+     ============================================================ -->
+<section class="landscape section-pad" id="landscape">
+  <div class="wrap">
+    <div class="landscape-head">
+      <p class="eyebrow" data-reveal="up">Comparative landscape</p>
+      <h2 data-reveal="up" data-reveal-delay="0.05">Everyone else solves part of the problem.</h2>
+      <p data-reveal="up" data-reveal-delay="0.1">Digital-health monitors, respiratory patches, and implantable sensors each cover one piece of the picture. RecoverPath is built to cover all of it, non-invasively.</p>
+    </div>
+    <div class="compare-wrap" data-reveal="up" data-reveal-delay="0.15">
+    <div class="compare-scroll" id="compareScroll" tabindex="0" role="region" aria-label="Comparison table, scrollable horizontally">
+      <table class="compare">
+        <caption>Comparison of post-discharge monitoring approaches, by form factor and sensing capability.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Approach</th>
+            <th scope="col">Biofourmis</th>
+            <th scope="col">Strados Labs RESP</th>
+            <th scope="col">CardioMEMS (Abbott)</th>
+            <th scope="col" class="col-recoverpath">RecoverPath</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Form factor</th>
+            <td>Upper-arm patch, software-first</td>
+            <td>Chest patch</td>
+            <td>Surgically implanted sensor</td>
+            <td class="col-recoverpath">Chest strap</td>
+          </tr>
+          <tr>
+            <th scope="row">Invasive?</th>
+            <td class="no">No</td>
+            <td class="no">No</td>
+            <td class="yes">Yes — surgical implant</td>
+            <td class="col-recoverpath no">No</td>
+          </tr>
+          <tr>
+            <th scope="row">Fluid / bioimpedance</th>
+            <td class="no">No</td>
+            <td class="no">No</td>
+            <td class="yes">Yes (pressure, not impedance)</td>
+            <td class="col-recoverpath yes">Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Acoustic / respiratory</th>
+            <td class="no">No</td>
+            <td class="yes">Yes — FDA-cleared, strong for COPD</td>
+            <td class="no">No</td>
+            <td class="col-recoverpath yes">Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Processing</th>
+            <td>Cloud-only</td>
+            <td>Cloud-only</td>
+            <td>Cloud-only</td>
+            <td class="col-recoverpath">Edge AI on-device (ESP32-C6) + cloud</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="compare-fade" id="compareFade" aria-hidden="true"></div>
+    </div>
+    <p class="compare-hint">Scroll to see all columns →</p>
+    <p class="landscape-position" data-reveal="up" data-reveal-delay="0.2">RecoverPath is the only option that is both <em>non-invasive</em> and covers the full sensor stack — fluid, rhythm, oxygen, sound, and activity — in one device.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. TECHNOLOGY & PROTOTYPE — pinned scroll-driven explode
+     ============================================================ -->
+<section class="prototype section-pad" id="prototype">
+  <div class="wrap">
+    <div class="prototype-intro">
+      <div>
+        <p class="eyebrow" data-reveal="up">Technology &amp; prototype</p>
+        <h2 data-reveal="up" data-reveal-delay="0.05">What's actually inside the strap.</h2>
+        <p data-reveal="up" data-reveal-delay="0.1">An ESP32-C6 microcontroller integrates the full sensor stack inside a 3D-printed chest-piece housing, worn on an adjustable chest band. On-device preprocessing and risk scoring flag meaningful changes — not raw data dumps — before anything is transmitted.</p>
+      </div>
+      <p class="prototype-note" data-reveal="up" data-reveal-delay="0.15">Scroll to open the housing and label each component. Current build: XIAO ESP32-C6 prototype board; scaled version targets ESP32-C6-MINI-1 and a custom PCB.</p>
+    </div>
+  </div>
+
+  <div class="prototype-stage" id="prototypeStage">
+    <div class="prototype-progress" aria-hidden="true">
+      <div class="prototype-progress-fill" id="prototypeProgressFill"></div>
+    </div>
+    <!-- Decorative for screen readers: this is a scroll-choreographed
+         visual explosion with spatially-positioned labels that don't
+         carry meaning outside the animation. The equivalent content
+         (a plain list of what's inside) is provided right after this
+         div via .proto-sr-summary, which stays in normal reading order. -->
+    <div class="proto-visual" id="protoVisual" aria-hidden="true">
+
+      <div class="proto-part proto-band" id="part-band" data-target-x="0" data-target-y="230" data-target-rot="0">
+        <div class="part-fill" style="background:var(--ink-faint)"></div>
+        <code>Chest band</code>
+      </div>
+
+      <div class="proto-part proto-housing" id="part-housing" data-target-x="0" data-target-y="0" data-target-rot="0">
+        <div class="part-fill" style="background:var(--accent)"></div>
+        <code>Housing</code>
+      </div>
+
+      <div class="proto-part proto-pcb" id="part-pcb" data-target-x="0" data-target-y="-150" data-target-rot="0">
+        <div class="part-fill" style="background:var(--ink)"></div>
+        <code>PCB · ESP32-C6</code>
+      </div>
+
+      <div class="proto-part proto-ecg" id="part-ecg" data-target-x="-200" data-target-y="-40" data-target-rot="-8">
+        <div class="part-fill" style="background:var(--sig-ecg)"></div>
+        <code>ECG</code>
+      </div>
+
+      <div class="proto-part proto-spo2" id="part-spo2" data-target-x="200" data-target-y="-40" data-target-rot="8">
+        <div class="part-fill" style="background:var(--sig-spo2)"></div>
+        <code>SpO2</code>
+      </div>
+
+      <div class="proto-part proto-mic" id="part-mic" data-target-x="-190" data-target-y="90" data-target-rot="-4">
+        <div class="part-fill" style="background:var(--sig-acoustic)"></div>
+        <code>Mic</code>
+      </div>
+
+      <div class="proto-part proto-imu" id="part-imu" data-target-x="190" data-target-y="90" data-target-rot="4">
+        <div class="part-fill" style="background:var(--sig-imu)"></div>
+        <code>IMU</code>
+      </div>
+
+      <div class="proto-part proto-battery" id="part-battery" data-target-x="0" data-target-y="150" data-target-rot="0">
+        <div class="part-fill" style="background:var(--sig-bioz)"></div>
+        <code>3.7V LiPo</code>
+      </div>
+
+      <div class="proto-label" id="label-band" data-anchor="part-band"><span class="dot"></span><b>Adjustable chest band</b> — comfort &amp; long-term wear</div>
+      <div class="proto-label" id="label-housing" data-anchor="part-housing"><span class="dot"></span><b>3D-printed housing</b> — enclosure + acoustic coupling chamber</div>
+      <div class="proto-label" id="label-pcb" data-anchor="part-pcb"><span class="dot"></span><b>ESP32-C6</b> — BLE/WiFi microcontroller, on-device preprocessing</div>
+      <div class="proto-label" id="label-ecg" data-anchor="part-ecg"><span class="dot"></span><b>MAX30001</b> — ECG + bioimpedance</div>
+      <div class="proto-label" id="label-spo2" data-anchor="part-spo2"><span class="dot"></span><b>MAX30102</b> — SpO2 + heart rate</div>
+      <div class="proto-label" id="label-mic" data-anchor="part-mic"><span class="dot"></span><b>MAX4466 mic</b> — cough &amp; wheeze detection</div>
+      <div class="proto-label" id="label-imu" data-anchor="part-imu"><span class="dot"></span><b>MPU-6050</b> — activity &amp; posture</div>
+      <div class="proto-label" id="label-battery" data-anchor="part-battery"><span class="dot"></span><b>3.7V LiPo</b> — via TP4056 charge management</div>
+
+    </div>
+    <div class="proto-closed-hint" id="protoClosedHint" aria-hidden="true"><span class="proto-scroll-icon" aria-hidden="true"></span>Scroll to explode the prototype</div>
+  </div>
+
+  <!-- Visible replacement for the floating labels below 700px — see the
+       JUDGMENT CALL comment near .proto-legend's media query. Content
+       intentionally mirrors the visually-hidden screen-reader list
+       below, since both exist for the same reason (no room to float
+       labels), just triggered by different conditions. -->
+  <div class="wrap">
+    <div class="proto-legend" id="protoLegend">
+      <div class="proto-legend-item"><span class="dot" style="background:var(--ink-faint)"></span><div><b>Chest band</b><span>Adjustable band — comfort &amp; long-term wear</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--accent)"></span><div><b>Housing</b><span>3D-printed enclosure + acoustic coupling chamber</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--ink)"></span><div><b>PCB · ESP32-C6</b><span>BLE/WiFi microcontroller, on-device preprocessing</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--sig-bioz)"></span><div><b>3.7V LiPo</b><span>Via TP4056 charge management</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--sig-ecg)"></span><div><b>MAX30001</b><span>ECG + bioimpedance</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--sig-spo2)"></span><div><b>MAX30102</b><span>SpO2 + heart rate</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--sig-acoustic)"></span><div><b>MAX4466 mic</b><span>Cough &amp; wheeze detection</span></div></div>
+      <div class="proto-legend-item"><span class="dot" style="background:var(--sig-imu)"></span><div><b>MPU-6050</b><span>Activity &amp; posture</span></div></div>
+    </div>
+  </div>
+
+  <!-- Non-visual equivalent of the exploded-view animation above:
+       everyone gets this list of what's inside, screen reader users
+       just don't get the scroll choreography. -->
+  <h3 class="visually-hidden" id="protoSrHeading">Inside the RecoverPath prototype</h3>
+  <ul class="visually-hidden" aria-labelledby="protoSrHeading">
+    <li>Adjustable chest band — comfort and long-term wear</li>
+    <li>3D-printed housing — sensor enclosure and acoustic coupling chamber for the microphone</li>
+    <li>ESP32-C6 microcontroller and PCB — BLE/WiFi, on-device signal preprocessing</li>
+    <li>MAX30001 — ECG and bioimpedance sensing</li>
+    <li>MAX30102 — SpO2 and heart-rate sensing</li>
+    <li>MAX4466 microphone — cough and wheeze detection</li>
+    <li>MPU-6050 — activity and posture sensing (IMU)</li>
+    <li>3.7V LiPo battery with TP4056 charge management</li>
+  </ul>
+
+  <div class="wrap">
+    <div class="bom-strip" data-reveal="up">
+      <div class="bom-item"><b>Microcontroller</b><span>XIAO ESP32-C6 / ESP32-C6-MINI-1 — BLE/WiFi, on-device processing</span></div>
+      <div class="bom-item"><b>Power</b><span>3.7V LiPo battery with TP4056 / MCP73831 charge management</span></div>
+      <div class="bom-item"><b>Motion</b><span>MPU-6050 prototype, Bosch BMI270 in the scaled build</span></div>
+      <div class="bom-item"><b>Enclosure</b><span>3D-printed chest-piece housing with acoustic coupling chamber</span></div>
+    </div>
+    <div class="device-frame" style="margin-top:2rem; aspect-ratio:16/7;" id="prototypePhotoPlaceholder" role="img" aria-label="Placeholder for real prototype photos — 3D-printed housing, band, and PCB" data-reveal="up">
+      <span class="frame-label">[ PROTOTYPE PHOTOS — id: prototypePhotoPlaceholder ]</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     8. CLINICAL WORKFLOW
+     ============================================================ -->
+<section class="workflow section-pad" id="workflow">
+  <div class="wrap">
+    <div class="workflow-head">
+      <p class="eyebrow" data-reveal="up">Clinical workflow</p>
+      <h2 data-reveal="up" data-reveal-delay="0.05">From discharge to avoided readmission.</h2>
+      <p data-reveal="up" data-reveal-delay="0.1">Five stages connect a patient leaving the hospital to a care team acting early enough to keep them out of it.</p>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="timeline-track"><div class="timeline-track-fill" id="timelineFill"></div></div>
+      <div class="timeline-steps">
+        <div class="timeline-step" data-step="0"><div class="timeline-dot"></div><div class="step-num">01</div><h3>Discharge</h3><p>Patient is fitted with the RecoverPath chest strap before leaving the hospital.</p></div>
+        <div class="timeline-step" data-step="1"><div class="timeline-dot"></div><div class="step-num">02</div><h3>Home monitoring</h3><p>The strap continuously tracks fluid, rhythm, oxygen, respiratory sound, and activity.</p></div>
+        <div class="timeline-step" data-step="2"><div class="timeline-dot"></div><div class="step-num">03</div><h3>Early detection</h3><p>On-device and backend analysis flags concerning trends — rising fluid, new arrhythmia, dropping SpO2.</p></div>
+        <div class="timeline-step" data-step="3"><div class="timeline-dot"></div><div class="step-num">04</div><h3>Clinician outreach</h3><p>Care teams are alerted and can intervene — medication adjustment, a check-in call, or an early visit.</p></div>
+        <div class="timeline-step" data-step="4"><div class="timeline-dot"></div><div class="step-num">05</div><h3>Outcome</h3><p>Deterioration is caught and treated at home, before it becomes a hospital readmission.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     9. EVIDENCE & ROADMAP
+     ============================================================ -->
+<section class="evidence section-pad" id="evidence">
+  <div class="wrap evidence-grid">
+    <div class="evidence-copy" data-reveal="up">
+      <p class="eyebrow">Evidence &amp; roadmap</p>
+      <h2>The reasoning behind the sensor stack.</h2>
+      <ul class="evidence-list">
+        <li><b>Bioimpedance as a fluid signal</b><p>Thoracic impedance trends have long been studied as a non-invasive proxy for pulmonary fluid status, tracking changes days ahead of clinically reported symptoms.</p><span class="cite">Fluid-status monitoring literature</span></li>
+        <li><b>AFib and decompensation</b><p>Atrial fibrillation is a well-documented trigger for acute heart-failure decompensation, implicated in roughly a quarter to a third of episodes.</p><span class="cite">Arrhythmia &amp; HF outcomes literature</span></li>
+        <li><b>Acoustic sensing for COPD</b><p>Cough and wheeze acoustics are an established, FDA-cleared basis for respiratory monitoring in comparable products, supporting the case for sound as a standalone biomarker.</p><span class="cite">Respiratory acoustic monitoring literature</span></li>
+      </ul>
+    </div>
+    <div class="roadmap" data-reveal="up" data-reveal-delay="0.1">
+      <span class="stage-badge">Current stage</span>
+      <p class="roadmap-lede">Early prototyping and bench testing on simulated signals — with early pilot interest from hospital partners for future discharge-monitoring programs.</p>
+      <ol class="milestones">
+        <li>Signal validation against reference measurements.</li>
+        <li>Algorithm tuning on real-world data.</li>
+        <li>IRB approval for a clinical pilot study.</li>
+        <li>Regulatory strategy scoping (FDA 510(k) pathway).</li>
+      </ol>
+      <p class="clinical-note">Along the way, informal conversations with physicians and researchers in pulmonology, sleep medicine, and critical-care AI have helped sanity-check the reasoning behind the sensor stack and use cases.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     10. TEAM / STORY
+     ============================================================ -->
+<section class="team section-pad" id="team">
+  <div class="wrap team-grid">
+    <div class="team-copy" data-reveal="left">
+      <p class="eyebrow">Team &amp; story</p>
+      <h2>Built by people who kept asking "why isn't this solved yet?"</h2>
+      <p class="founder-note">We kept coming back to the same gap: a patient leaves the hospital feeling fine, and by the time anyone — including them — notices something's wrong, it's an ER visit again. A wrist wearable couldn't read fluid or lung sound. A patch couldn't cover rhythm and breathing together. The chest was the only place all of it lived in one signal.</p>
+      <p>RecoverPath is a student-built medtech project from a multidisciplinary team spanning biotech, AI, hardware, and clinical/business research. We're early — bench-testing on simulated signals, not yet a finished product — but the reasoning behind every sensor on this strap has been argued over, prototyped, and rebuilt more than once.</p>
+    </div>
+    <div data-reveal="right">
+      <ul class="team-roles">
+        <li class="team-role"><div class="avatar">HW</div><b>Hardware &amp; Firmware</b><span>Chest-piece housing, sensor integration, ESP32-C6 pipeline</span></li>
+        <li class="team-role"><div class="avatar">AI</div><b>Signal Processing &amp; AI</b><span>Risk scoring, edge inference, trend detection</span></li>
+        <li class="team-role"><div class="avatar">CL</div><b>Clinical Reasoning</b><span>Use cases, evidence review, workflow design</span></li>
+        <li class="team-role"><div class="avatar">PB</div><b>Product &amp; Research</b><span>Positioning, roadmap, hospital-partner conversations</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     11. CONTACT — one primary CTA, one simple contact method
+     ============================================================ -->
+<section class="contact section-pad" id="contact">
+  <div class="wrap">
+    <p class="eyebrow" style="justify-content:center; color:inherit; opacity:0.8;" data-reveal="up">Get in touch</p>
+    <h2 data-reveal="up" data-reveal-delay="0.05">Interested in RecoverPath?</h2>
+    <p data-reveal="up" data-reveal-delay="0.1">Whether you're a clinician, a care-transition team, or just curious about the engineering — we'd like to hear from you.</p>
+    <a href="mailto:team@recoverpath.example" class="btn" data-reveal="up" data-reveal-delay="0.15">Contact the team</a>
+    <div class="contact-email">or write to <a href="mailto:team@recoverpath.example">team@recoverpath.example</a></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <span>© 2026 RecoverPath. Student-built medtech project.</span>
+  <span>Prototype stage — not yet available for clinical use.</span>
+</footer>
+
+<!-- ============================================================
+     SCRIPTS
+     GSAP + ScrollTrigger (CDN) drive all scroll motion.
+     Everything degrades to simple opacity fades under
+     prefers-reduced-motion.
+     ============================================================ -->
+<!-- All three scripts are `defer`: this lets the browser continue
+     parsing/painting the rest of the page while GSAP downloads instead
+     of blocking on it (Lighthouse measured ~2.8s of render-blocking
+     savings here on a throttled mobile profile). `defer` preserves
+     execution order across scripts that have it, so the inline script
+     below still reliably runs after both GSAP files are ready. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+<script defer>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduceMotion){ document.documentElement.classList.add("reduced-motion"); }
+
+  /* Small debounce helper — used for resize handlers below so we do one
+     unit of layout work after the user finishes resizing, not on every
+     intermediate frame the browser fires during a drag-resize. */
+  function debounce(fn, wait){
+    var t;
+    return function(){
+      var args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function(){ fn.apply(null, args); }, wait);
+    };
+  }
+
+  /* ---------------- THEME TOGGLE ---------------- */
+  var root = document.documentElement;
+  var toggle = document.getElementById("themeToggle");
+  function applyTheme(t){
+    if(t === "dark"){ root.setAttribute("data-theme","dark"); toggle.setAttribute("aria-pressed","true"); }
+    else { root.removeAttribute("data-theme"); toggle.setAttribute("aria-pressed","false"); }
+  }
+  // Safari private browsing throws on localStorage.getItem/setItem rather
+  // than just failing silently — wrap both so theme switching still works
+  // for the session, it just won't persist across reloads there.
+  var saved = null;
+  try { saved = localStorage.getItem("recoverpath-theme"); } catch(err){ /* private mode / storage disabled */ }
+  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+  toggle.addEventListener("click", function(){
+    var isDark = root.getAttribute("data-theme") === "dark";
+    var next = isDark ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem("recoverpath-theme", next); } catch(err){ /* private mode / storage disabled */ }
+  });
+
+  /* ---------------- MOBILE NAV MENU ---------------- */
+  var hamburger = document.getElementById("navHamburger");
+  var mobileMenu = document.getElementById("mobileMenu");
+  var menuLastFocused = null;
+
+  function onMenuKeydown(e){
+    if(e.key === "Escape"){ closeMenu(); return; }
+    if(e.key === "Tab"){
+      var focusables = mobileMenu.querySelectorAll("a, button");
+      if(!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+  }
+  function openMenu(){
+    mobileMenu.classList.add("is-open");
+    mobileMenu.setAttribute("aria-hidden", "false");
+    hamburger.setAttribute("aria-expanded", "true");
+    hamburger.classList.add("is-active");
+    hamburger.setAttribute("aria-label", "Close menu");
+    document.body.classList.add("mobile-menu-open");
+    menuLastFocused = document.activeElement;
+    var firstLink = mobileMenu.querySelector("a");
+    if(firstLink) firstLink.focus();
+    document.addEventListener("keydown", onMenuKeydown);
+  }
+  function closeMenu(returnFocus){
+    mobileMenu.classList.remove("is-open");
+    mobileMenu.setAttribute("aria-hidden", "true");
+    hamburger.setAttribute("aria-expanded", "false");
+    hamburger.classList.remove("is-active");
+    hamburger.setAttribute("aria-label", "Open menu");
+    document.body.classList.remove("mobile-menu-open");
+    document.removeEventListener("keydown", onMenuKeydown);
+    if(returnFocus !== false && menuLastFocused){ menuLastFocused.focus(); }
+  }
+  if(hamburger && mobileMenu){
+    hamburger.addEventListener("click", function(){
+      if(mobileMenu.classList.contains("is-open")){ closeMenu(); }
+      else { openMenu(); }
+    });
+    mobileMenu.querySelectorAll("a").forEach(function(a){
+      a.addEventListener("click", function(){ closeMenu(false); });
+    });
+    // Keep menu state consistent if the viewport crosses the collapse
+    // breakpoint while open (e.g. rotating a tablet).
+    window.addEventListener("resize", debounce(function(){
+      if(window.innerWidth > 980 && mobileMenu.classList.contains("is-open")){
+        closeMenu(false);
+      }
+    }, 150));
+  }
+
+  /* ---------------- COMPARATOR TABLE SCROLL FADE ---------------- */
+  var compareScroll = document.getElementById("compareScroll");
+  var compareFade = document.getElementById("compareFade");
+  if(compareScroll && compareFade){
+    var updateCompareFade = function(){
+      var atEnd = compareScroll.scrollLeft + compareScroll.clientWidth >= compareScroll.scrollWidth - 2;
+      compareFade.classList.toggle("is-hidden", atEnd);
+    };
+    updateCompareFade();
+    compareScroll.addEventListener("scroll", updateCompareFade, { passive: true });
+    window.addEventListener("resize", debounce(updateCompareFade, 150));
+  }
+
+  /* ---------------- NAV SCROLL STATE ---------------- */
+  var nav = document.getElementById("siteNav");
+  var lastScrollCheck = false;
+  window.addEventListener("scroll", function(){
+    var scrolled = window.scrollY > 40;
+    if(scrolled !== lastScrollCheck){
+      nav.classList.toggle("is-scrolled", scrolled);
+      lastScrollCheck = scrolled;
+    }
+  }, { passive:true });
+
+  /* ---------------- SMOOTH ANCHOR SCROLL ---------------- */
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener("click", function(e){
+      var id = a.getAttribute("href").slice(1);
+      var target = document.getElementById(id);
+      if(!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+  });
+
+  /* ================================================================
+     GENERIC REVEAL-ON-SCROLL (data-reveal="up|left|right|fade|scale|draw")
+     Uses IntersectionObserver for cheap, non-jank triggering.
+     Each variant gets a distinct motion signature.
+     ================================================================ */
+  var revealEls = document.querySelectorAll("[data-reveal]");
+  var revealStyles = {
+    up:    { from: { opacity:0, transform:"translateY(28px)" }, to: { opacity:1, transform:"translateY(0)" } },
+    left:  { from: { opacity:0, transform:"translateX(-32px)" }, to: { opacity:1, transform:"translateX(0)" } },
+    right: { from: { opacity:0, transform:"translateX(32px)" }, to: { opacity:1, transform:"translateX(0)" } },
+    fade:  { from: { opacity:0 }, to: { opacity:1 } },
+    scale: { from: { opacity:0, transform:"scale(0.94)" }, to: { opacity:1, transform:"scale(1)" } },
+    draw:  { from: { opacity:0, transform:"translateY(14px)" }, to: { opacity:1, transform:"translateY(0)" } }
+  };
+
+  revealEls.forEach(function(el){
+    var type = el.getAttribute("data-reveal") || "up";
+    var delay = parseFloat(el.getAttribute("data-reveal-delay") || "0");
+    var style = revealStyles[type] || revealStyles.up;
+    if(reduceMotion){
+      el.style.opacity = 1;
+    } else {
+      Object.assign(el.style, style.from);
+      el.style.transition = "none";
+    }
+  });
+
+  var revealObserver = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting) return;
+      var el = entry.target;
+      var type = el.getAttribute("data-reveal") || "up";
+      var delay = parseFloat(el.getAttribute("data-reveal-delay") || "0");
+      var style = revealStyles[type] || revealStyles.up;
+      if(reduceMotion){
+        el.style.transition = "opacity 0.5s ease " + delay + "s";
+        el.style.opacity = 1;
+      } else {
+        el.style.transition = "opacity 0.8s cubic-bezier(.16,.84,.32,1) " + delay + "s, transform 0.8s cubic-bezier(.16,.84,.32,1) " + delay + "s";
+        requestAnimationFrame(function(){ Object.assign(el.style, style.to); });
+      }
+      revealObserver.unobserve(el);
+    });
+  }, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
+  revealEls.forEach(function(el){ revealObserver.observe(el); });
+
+  /* ================================================================
+     SENSOR SIGNAL LINES — draw-on-scroll via stroke-dashoffset,
+     staggered per card; re-pulse briefly on hover.
+     ================================================================ */
+  document.querySelectorAll(".signal-path").forEach(function(path){
+    var len = path.getTotalLength ? path.getTotalLength() : 300;
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = reduceMotion ? 0 : len;
+  });
+  document.querySelectorAll(".sensor-card").forEach(function(card, i){
+    var path = card.querySelector(".signal-path");
+    var bars = card.querySelectorAll(".imu-bars line");
+    if(bars.length){
+      bars.forEach(function(bar){
+        if(!reduceMotion){ bar.style.transform = "scaleY(0)"; bar.style.transformOrigin = "bottom"; bar.style.transition = "transform 0.5s cubic-bezier(.16,.84,.32,1)"; }
+      });
+    }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        setTimeout(function(){
+          if(path){
+            path.style.transition = "stroke-dashoffset 1.1s cubic-bezier(.16,.84,.32,1)";
+            path.style.strokeDashoffset = 0;
+          }
+          bars.forEach(function(bar, bi){
+            setTimeout(function(){ bar.style.transform = "scaleY(1)"; }, bi * 40);
+          });
+        }, i * 90);
+        obs.unobserve(card);
+      });
+    }, { threshold: 0.35 });
+    obs.observe(card);
+
+    card.addEventListener("mouseenter", function(){
+      if(reduceMotion || !path) return;
+      var len = path.getTotalLength();
+      path.style.transition = "none";
+      path.style.strokeDashoffset = len * 0.12;
+      requestAnimationFrame(function(){
+        path.style.transition = "stroke-dashoffset 0.7s cubic-bezier(.16,.84,.32,1)";
+        path.style.strokeDashoffset = 0;
+      });
+    });
+  });
+
+  /* ================================================================
+     BIOIMPEDANCE SPOTLIGHT — draw trend line + reveal area/alert dot
+     ================================================================ */
+  var biozLine = document.getElementById("biozLinePath");
+  var biozArea = document.getElementById("biozAreaPath");
+  var biozDot = document.getElementById("biozAlertDot");
+  if(biozLine){
+    var bLen = biozLine.getTotalLength();
+    if(!reduceMotion){
+      biozLine.style.strokeDasharray = bLen;
+      biozLine.style.strokeDashoffset = bLen;
+    }
+    var biozObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        if(reduceMotion){
+          biozArea.style.transition = "opacity 0.6s ease";
+          biozArea.style.opacity = 1;
+          biozDot.setAttribute("r", 5);
+        } else {
+          biozLine.style.transition = "stroke-dashoffset 1.8s cubic-bezier(.16,.84,.32,1)";
+          biozLine.style.strokeDashoffset = 0;
+          setTimeout(function(){
+            biozArea.style.transition = "opacity 1s ease";
+            biozArea.style.opacity = 1;
+          }, 900);
+          setTimeout(function(){
+            biozDot.style.transition = "r 0.4s cubic-bezier(.16,.84,.32,1)";
+            biozDot.setAttribute("r", 5);
+          }, 1700);
+        }
+        biozObs.unobserve(entry.target);
+      });
+    }, { threshold: 0.4 });
+    biozObs.observe(biozLine.closest(".bioz-chart"));
+  }
+
+  /* ================================================================
+     REGISTER GSAP / SCROLLTRIGGER (skip pinning entirely if reduced motion)
+     ================================================================ */
+  if(window.gsap && window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+  }
+  var hasGsapScroll = window.gsap && window.ScrollTrigger && !reduceMotion;
+
+  /* ================================================================
+     7. EXPLODED PROTOTYPE VIEW
+     ================================================================ */
+  var protoStage = document.getElementById("prototypeStage");
+  var protoParts = Array.prototype.slice.call(document.querySelectorAll(".proto-part"));
+  var protoLabels = Array.prototype.slice.call(document.querySelectorAll(".proto-label"));
+  var progressFill = document.getElementById("prototypeProgressFill");
+
+  var protoVisual = document.getElementById("protoVisual");
+  function positionLabel(label){
+    // Computed from each part's final explode offset (data-target-x/y) in
+    // .proto-visual's own *local* (untransformed) coordinate space — labels
+    // are absolutely positioned relative to that same box, so this stays
+    // correct even when the whole diagram is scaled down responsively.
+    var anchorId = label.getAttribute("data-anchor");
+    var part = document.getElementById(anchorId);
+    if(!part || !protoVisual) return;
+    var targetX = parseFloat(part.getAttribute("data-target-x")) || 0;
+    var targetY = parseFloat(part.getAttribute("data-target-y")) || 0;
+    var partWidth = part.offsetWidth;
+    var cx = protoVisual.offsetWidth/2 + targetX;
+    var cy = protoVisual.offsetHeight/2 + targetY;
+    var side = targetX <= 0 ? -1 : 1;
+    label.style.top = cy + "px";
+    if(side < 0){
+      label.style.right = (protoVisual.offsetWidth - (cx - partWidth/2 - 14)) + "px";
+      label.style.left = "auto";
+      label.style.transform = "translateY(-50%)";
+      label.style.textAlign = "right";
+      label.style.flexDirection = "row-reverse";
+    } else {
+      label.style.left = (cx + partWidth/2 + 14) + "px";
+      label.style.right = "auto";
+      label.style.transform = "translateY(-50%)";
+    }
+  }
+
+  if(reduceMotion){
+    protoParts.forEach(function(part){
+      var x = part.getAttribute("data-target-x");
+      var y = part.getAttribute("data-target-y");
+      var r = part.getAttribute("data-target-rot");
+      part.style.transform = "translate(-50%,-50%) translate(" + x + "px," + y + "px) rotate(" + r + "deg)";
+      part.style.opacity = 1;
+    });
+    var closedHint = document.getElementById("protoClosedHint");
+    if(closedHint) closedHint.style.display = "none";
+    window.addEventListener("load", function(){ protoLabels.forEach(positionLabel); });
+    protoLabels.forEach(function(l){ l.style.opacity = 1; });
+    var protoRevealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ protoStage.classList.add("is-scrolling"); protoRevealObs.disconnect(); }
+      });
+    }, { threshold: 0.3 });
+    protoRevealObs.observe(protoStage);
+  } else if(hasGsapScroll) {
+    // initial closed state: everything stacked, centered, hidden
+    protoParts.forEach(function(part){ gsap.set(part, { opacity: 0, x:0, y:0, rotate:0 }); });
+    protoLabels.forEach(function(l){ gsap.set(l, { opacity: 0 }); });
+
+    var tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: protoStage,
+        start: "top top",
+        end: "+=180%",
+        scrub: 0.6,
+        pin: true,
+        anticipatePin: 1,
+        onUpdate: function(self){
+          progressFill.style.height = (self.progress * 100) + "%";
+          if(self.progress > 0.02){ protoStage.classList.add("is-scrolling"); }
+          else { protoStage.classList.remove("is-scrolling"); }
+        }
+      }
+    });
+
+    // Choreographed sequence, built with GSAP's relative position syntax
+    // ("<", "<0.x", "+=0.x") instead of hardcoded absolute times. Each
+    // label is positioned relative to its OWN part's tween, so a label
+    // always appears as that part finishes settling — never before it's
+    // visible, never long after. Narrative order: band -> housing ->
+    // PCB -> battery -> ECG/SpO2 -> mic/IMU.
+    tl.to("#part-housing", { opacity:1, duration:0.15 }, 0)
+      .to("#part-band", {
+          opacity:1, y:function(){ return +document.getElementById("part-band").dataset.targetY; },
+          duration:0.3, ease:"power2.out"
+        }, 0.08)
+      .to("#label-band", { opacity:1, duration:0.22 }, "<0.18") // fades in as band's move is finishing
+      .to("#label-housing", { opacity:1, duration:0.22 }, "+=0.06") // housing was already visible; its label follows band's, per the narrative order
+      .to("#part-pcb", {
+          opacity:1, y:function(){ return +document.getElementById("part-pcb").dataset.targetY; },
+          duration:0.3, ease:"power2.out"
+        }, "+=0.1")
+      .to("#label-pcb", { opacity:1, duration:0.22 }, "<0.18")
+      .to("#part-battery", {
+          opacity:1, y:function(){ return +document.getElementById("part-battery").dataset.targetY; },
+          duration:0.3, ease:"power2.out"
+        }, "+=0.12")
+      .to("#label-battery", { opacity:1, duration:0.22 }, "<0.18")
+      .to(["#part-ecg","#part-spo2"], {
+          opacity:1,
+          x:function(i,t){ return +t.dataset.targetX; },
+          y:function(i,t){ return +t.dataset.targetY; },
+          rotate:function(i,t){ return +t.dataset.targetRot; },
+          duration:0.35, ease:"back.out(1.4)", stagger:0.06
+        }, "+=0.14")
+      .to(["#label-ecg","#label-spo2"], { opacity:1, duration:0.22, stagger:0.06 }, "<0.24")
+      .to(["#part-mic","#part-imu"], {
+          opacity:1,
+          x:function(i,t){ return +t.dataset.targetX; },
+          y:function(i,t){ return +t.dataset.targetY; },
+          rotate:function(i,t){ return +t.dataset.targetRot; },
+          duration:0.35, ease:"back.out(1.4)", stagger:0.06
+        }, "+=0.14")
+      .to(["#label-mic","#label-imu"], { opacity:1, duration:0.22, stagger:0.06 }, "<0.24");
+
+    ScrollTrigger.addEventListener("refresh", function(){ protoLabels.forEach(positionLabel); });
+    window.addEventListener("load", function(){
+      protoLabels.forEach(positionLabel);
+      ScrollTrigger.refresh();
+    });
+    // Debounced: ScrollTrigger.refresh() already recalculates pin bounds
+    // (and triggers the "refresh" listener above, which repositions
+    // labels), so this only needs to run once after resizing settles —
+    // not on every intermediate resize event.
+    window.addEventListener("resize", debounce(function(){
+      protoLabels.forEach(positionLabel);
+    }, 150));
+  }
+
+  /* ================================================================
+     8. CLINICAL WORKFLOW TIMELINE — scroll progress + step highlight
+     ================================================================ */
+  var timelineSteps = Array.prototype.slice.call(document.querySelectorAll(".timeline-step"));
+  var timelineFill = document.getElementById("timelineFill");
+  var timelineEl = document.getElementById("timeline");
+
+  if(hasGsapScroll){
+    ScrollTrigger.create({
+      trigger: timelineEl,
+      start: "top 75%",
+      end: "bottom 60%",
+      scrub: 0.4,
+      onUpdate: function(self){
+        var progress = self.progress;
+        timelineFill.style.width = (progress * 100) + "%";
+        var activeIndex = Math.floor(progress * timelineSteps.length + 0.001);
+        timelineSteps.forEach(function(step, i){
+          step.classList.toggle("is-active", i <= activeIndex);
+        });
+      }
+    });
+  } else {
+    // reduced-motion / no-GSAP fallback: simple IntersectionObserver reveal
+    var stepObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){ entry.target.classList.add("is-active"); }
+      });
+    }, { threshold: 0.4 });
+    timelineSteps.forEach(function(step){ stepObs.observe(step); });
+    if(timelineFill){ timelineFill.style.width = "100%"; }
+  }
+
+})();
+</script>
+</body>
+</html>
