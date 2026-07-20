@@ -1,0 +1,182 @@
+/* ================================================================
+   RecoverPath — hospitals.html PAGE-SPECIFIC STYLES
+   Shared tokens/nav/mobile-menu/buttons come from styles.css.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   INTRO / DASHBOARD CTA
+   ---------------------------------------------------------------- */
+.hosp-hero{
+  padding-top: 9rem;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--line);
+}
+.hosp-hero-grid{
+  display:grid; grid-template-columns: 1.1fr 0.9fr;
+  gap: clamp(2rem,5vw,4rem);
+  align-items: center;
+}
+.hosp-hero h1{ font-size: var(--step-h2); max-width: 16ch; margin: 0.6rem 0 1.1rem; }
+.hosp-hero p{ max-width: 46ch; }
+.dashboard-card{
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: clamp(1.6rem,3vw,2.4rem);
+  box-shadow: var(--shadow-soft);
+}
+.dashboard-card p{ font-size: 0.92rem; margin-bottom: 1.4rem; }
+.dashboard-card .btn{ width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.9em 1.4em; }
+.dashboard-card .dash-url{
+  margin: 0.9rem 0 0; font-family: var(--font-mono); font-size: 0.76rem;
+  color: var(--ink-faint); text-align:center; word-break: break-all;
+}
+@media (max-width: 860px){
+  .hosp-hero-grid{ grid-template-columns: 1fr; }
+}
+
+/* ----------------------------------------------------------------
+   MODEL PERFORMANCE — intro + tradeoff framing
+   ---------------------------------------------------------------- */
+.model-section{ background: var(--surface); }
+.model-intro{ max-width: 62ch; }
+.model-intro h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; max-width: 18ch; }
+.model-meta{
+  display:flex; flex-wrap:wrap; gap: 0.5rem 1.6rem;
+  font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-faint);
+  margin: 1.4rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line);
+}
+.model-meta span b{ color: var(--ink-soft); font-weight:500; }
+
+/* Honest tradeoff callout — reuses the same restrained "flagged box"
+   language as .spotlight-compare on the homepage (border + bold inline
+   emphasis) rather than an alarming red banner; the point is candor,
+   not alarm. */
+.tradeoff-note{
+  margin-top: 1.6rem;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 1.1rem 1.3rem;
+  background: var(--surface-raised);
+  font-size: 0.92rem;
+}
+.tradeoff-note b{ color: var(--ink); }
+
+/* ----------------------------------------------------------------
+   ROC / PR CHART CARDS
+   ---------------------------------------------------------------- */
+.charts-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem,3vw,2.5rem);
+  margin-top: 3rem;
+}
+@media (max-width: 780px){ .charts-grid{ grid-template-columns: 1fr; } }
+.chart-card{
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: clamp(1.4rem,2.5vw,2rem);
+}
+.chart-card-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:1rem;
+  margin-bottom: 1rem;
+}
+.chart-card-head h3{ font-size: 1rem; font-family: var(--font-body); font-weight:700; }
+.auc-badge{
+  font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent);
+  background: var(--accent-soft); padding: 0.3em 0.7em; border-radius: 999px;
+  white-space: nowrap;
+}
+/* Explicit aspect-ratio rather than relying on browsers to infer sizing
+   from viewBox alone — without it, some engines fall back to the SVG
+   default intrinsic size (300x150) instead of scaling to the card
+   width, which collapsed this to near-zero visible height. */
+.chart-card svg{ width:100%; height:auto; aspect-ratio: 440/340; overflow: visible; }
+.chart-axis-label{
+  font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint);
+}
+.chart-grid-line{ stroke: var(--line); stroke-width: 1; }
+.chart-diagonal{ stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart-baseline{ stroke: var(--sig-acoustic); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.chart-title-x, .chart-title-y{
+  font-family: var(--font-mono); font-size: 10px; fill: var(--ink-soft);
+}
+
+/* ----------------------------------------------------------------
+   CONFUSION MATRIX + DERIVED RATES
+   ---------------------------------------------------------------- */
+.confusion-section{
+  margin-top: clamp(3rem,6vw,5rem);
+  display:grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(2rem,5vw,4rem);
+  align-items:start;
+}
+@media (max-width: 860px){ .confusion-section{ grid-template-columns: 1fr; } }
+.confusion-grid{
+  border-collapse: separate; border-spacing: 2px;
+  font-family: var(--font-mono);
+  width: 100%;
+}
+.confusion-grid .cm-corner{ background:transparent; }
+.confusion-grid .cm-axis-label{
+  text-align:center; font-weight: 500;
+  font-size: 0.72rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0.6rem;
+}
+.confusion-grid .cm-cell{
+  padding: 1.2rem 0.8rem; text-align:center; border-radius: var(--radius-sm);
+}
+.confusion-grid .cm-cell b{ display:block; font-size: 1.6rem; font-family: var(--font-display); color: var(--ink); }
+.confusion-grid .cm-cell span{ font-size: 0.7rem; color: var(--ink-faint); }
+.confusion-grid .cm-correct{ background: var(--accent-soft); }
+.confusion-grid .cm-incorrect{ background: color-mix(in srgb, var(--sig-ecg) 14%, transparent); }
+.confusion-grid .cm-row-label{ text-align: right; padding-right: 1rem; }
+.confusion-rates{
+  display:grid; grid-template-columns: repeat(2,1fr); gap: 1.2rem 2rem;
+  margin-top: 1.6rem;
+}
+.confusion-rate b{
+  display:block; font-family: var(--font-display); font-size: 1.5rem; color: var(--ink);
+}
+.confusion-rate span{ font-size: 0.8rem; color: var(--ink-faint); }
+
+/* ----------------------------------------------------------------
+   TOP MODEL DRIVERS (SHAP, translated to plain language)
+   ---------------------------------------------------------------- */
+.drivers-section{ margin-top: clamp(3rem,6vw,5rem); }
+.drivers-head{ max-width: 60ch; margin-bottom: 2rem; }
+.drivers-head h2{ font-size: var(--step-h2); margin: 0.6rem 0 1rem; max-width:18ch; }
+.driver-list{ list-style:none; margin:0; padding:0; display:grid; gap: 0.9rem; }
+.driver-item{
+  display:grid; grid-template-columns: 2.2rem 1fr auto; align-items:center; gap: 1rem;
+  padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.driver-rank{ font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-faint); }
+.driver-copy b{ display:block; font-size: 0.92rem; }
+.driver-copy span{ font-size: 0.8rem; color: var(--ink-faint); }
+.driver-source{
+  font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent);
+  background: var(--accent-soft); padding: 0.3em 0.6em; border-radius: 999px;
+  white-space: nowrap; text-align:center;
+}
+/* Bar under each item scales with |mean SHAP value| rank, purely as a
+   restrained visual reinforcement of ordering — not a precise value
+   axis (SHAP magnitude isn't on a 0-1 scale). */
+.driver-bar-track{ grid-column: 1/4; height: 3px; background: var(--line); border-radius: 2px; overflow:hidden; }
+.driver-bar-fill{ height:100%; background: var(--accent); width:0; transition: width 1s var(--ease-out); }
+@media (max-width: 620px){
+  .driver-item{ grid-template-columns: 1fr auto; }
+  .driver-rank{ display:none; }
+}
+
+/* ----------------------------------------------------------------
+   LIMITATIONS NOTE
+   ---------------------------------------------------------------- */
+.limitations-note{
+  margin-top: clamp(3rem,6vw,5rem);
+  border-top: 1px solid var(--line);
+  padding-top: 2rem;
+  font-size: 0.87rem; color: var(--ink-faint);
+  max-width: 66ch;
+}
+.limitations-note b{ color: var(--ink-soft); }

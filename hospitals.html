@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RecoverPath for Hospitals — Clinical dashboard &amp; model performance</title>
+<meta name="description" content="Open the RecoverPath clinical risk dashboard and review real model performance — ROC/PR curves, confusion matrix, and the top drivers behind each readmission-risk score." />
+
+<!-- TODO: replace with the real production domain once one exists. -->
+<link rel="canonical" href="https://www.recoverpath.example/hospitals.html" />
+
+<!-- Open Graph / Twitter Card — TODO: swap og-image.png for a real
+     1200x630 share image and update the absolute URLs once the site
+     has a real domain. -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="RecoverPath for Hospitals — Clinical dashboard & model performance" />
+<meta property="og:description" content="Open the RecoverPath clinical risk dashboard and review real model performance — ROC/PR curves, confusion matrix, and the top drivers behind each readmission-risk score." />
+<meta property="og:url" content="https://www.recoverpath.example/hospitals.html" />
+<meta property="og:image" content="https://www.recoverpath.example/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="RecoverPath for Hospitals — Clinical dashboard & model performance" />
+<meta name="twitter:description" content="Open the RecoverPath clinical risk dashboard and review real model performance — ROC/PR curves, confusion matrix, and the top drivers behind each readmission-risk score." />
+<meta name="twitter:image" content="https://www.recoverpath.example/og-image.png" />
+
+<link rel="icon" type="image/png" href="RC_Logo_TBG.png" />
+
+<!-- Shared design system (tokens, base type, nav, mobile menu, buttons)
+     — same file index.html uses. Page-specific styles below. -->
+<link rel="stylesheet" href="styles.css" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&display=optional" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+</noscript>
+
+<link rel="stylesheet" href="hospitals.css" />
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+
+<!-- ============================================================
+     NAV — identical structure/behavior to index.html (shared
+     styles.css + site.js). The in-page-anchor links now point back to
+     index.html's sections since this is a separate page; "For
+     Hospitals" is the current page, marked with aria-current.
+     ============================================================ -->
+<nav class="site-nav" id="siteNav" aria-label="Primary">
+  <a href="index.html" class="brand"><img src="RC_Logo_TBG.png" class="brand-mark" alt="" aria-hidden="true">RecoverPath</a>
+  <ul class="nav-links">
+    <li><a href="index.html#problem">Problem</a></li>
+    <li><a href="index.html#sensors">Sensors</a></li>
+    <li><a href="index.html#prototype">Technology</a></li>
+    <li><a href="index.html#workflow">Workflow</a></li>
+    <li><a href="index.html#evidence">Evidence</a></li>
+    <li><a href="index.html#team">Team</a></li>
+    <li><a href="hospitals.html" aria-current="page">For Hospitals</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" aria-pressed="false" aria-label="Toggle dark mode"></button>
+    <a href="index.html#contact" class="btn nav-contact-btn">Contact</a>
+    <button class="nav-hamburger" id="navHamburger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span class="hamburger-line" aria-hidden="true"></span>
+      <span class="hamburger-line" aria-hidden="true"></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <ul class="mobile-menu-links">
+    <li><a href="index.html#problem">Problem</a></li>
+    <li><a href="index.html#sensors">Sensors</a></li>
+    <li><a href="index.html#prototype">Technology</a></li>
+    <li><a href="index.html#workflow">Workflow</a></li>
+    <li><a href="index.html#evidence">Evidence</a></li>
+    <li><a href="index.html#team">Team</a></li>
+    <li><a href="hospitals.html" aria-current="page">For Hospitals</a></li>
+    <li><a href="index.html#contact" class="btn" style="font-family:var(--font-body); font-size:0.9rem; display:inline-flex;">Contact the team</a></li>
+  </ul>
+</div>
+
+<main id="main" tabindex="-1">
+
+<!-- ============================================================
+     1. INTRO + CLINICAL DASHBOARD LINK
+     ============================================================ -->
+<section class="hosp-hero section-pad" id="top">
+  <div class="wrap hosp-hero-grid">
+    <div data-reveal="up">
+      <p class="eyebrow">For hospital care-transition teams</p>
+      <h1>A risk score your team can act on before the readmission happens.</h1>
+      <p>RecoverPath's on-device sensor stack feeds a risk model built specifically to flag post-discharge heart-failure and COPD deterioration early — surfaced in a dashboard built for care coordinators and remote monitoring teams, not just a data export.</p>
+    </div>
+    <div class="dashboard-card" data-reveal="up" data-reveal-delay="0.1">
+      <p>See live patient risk tiers, alerts, and trend detail in the clinical dashboard.</p>
+      <a class="btn" href="https://recband.vercel.app/dashboard" target="_blank" rel="noopener noreferrer">
+        Open the Clinical Dashboard →
+        <span class="visually-hidden">(opens in new tab)</span>
+      </a>
+      <p class="dash-url">recband.vercel.app/dashboard</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. REAL MODEL PERFORMANCE
+     Numbers sourced from C:\Users\dnsja\RecBand\results\metrics.json
+     and the matching roc_curve.png / pr_curve.png / confusion_matrix.png
+     / shap_importance.png (same run — AUC/labels in the images agree
+     with metrics.json to 3 decimal places).
+
+     TODO — data discrepancy found while building this page:
+     results/model_card.md contains a "Performance Metrics" table with
+     different numbers (AUC-ROC 0.8079 vs 0.8614, Specificity 0.7656 vs
+     0.4933, etc.) and a *different* top-10 SHAP feature ranking (with
+     features like hrv_sdnn/rr_imu_mean/days_since_discharge that don't
+     even appear in shap_importance.png). The model_card.md numbers are
+     internally inconsistent with its own confusion matrix and don't
+     match any of the four result images, while metrics.json's numbers
+     reproduce the confusion matrix exactly (4012+4121+227+3640=12000)
+     and match the AUC labels baked into the PNGs. metrics.json + the
+     PNGs were treated as ground truth here; model_card.md's table
+     looks stale/hand-edited and should probably be regenerated or
+     removed so it stops disagreeing with the actual eval run.
+
+     ROC/PR curve *shapes* below are smooth reconstructions traced from
+     roc_curve.png / pr_curve.png (results/ had no raw fpr/tpr/precision
+     point arrays or a saved model+test-set to regenerate them from —
+     only the summary metrics.json and the rendered PNGs). The AUC
+     values labeled on each chart are the real sourced numbers, not
+     estimates. -->
+<section class="model-section section-pad" id="model">
+  <div class="wrap">
+    <div class="model-intro">
+      <p class="eyebrow" data-reveal="up">Real model performance</p>
+      <h2 data-reveal="up" data-reveal-delay="0.05">How the risk score is actually generated.</h2>
+      <p data-reveal="up" data-reveal-delay="0.1">The RecoverPath risk score comes from a two-layer model: four Isolation Forests each specialize in one signal domain (cardiac, respiratory, fluid, activity) and feed their anomaly scores into an XGBoost classifier alongside 44 wearable features, trained to predict 30-day readmission risk from a 24-hour sensing window.</p>
+      <div class="model-meta" data-reveal="up" data-reveal-delay="0.15">
+        <span>Architecture: <b>Isolation Forest ×4 + XGBoost</b></span>
+        <span>Test set: <b>12,000 windows</b> (3,867 positive)</span>
+        <span>Task: <b>30-day readmission risk</b></span>
+      </div>
+      <div class="tradeoff-note" data-reveal="up" data-reveal-delay="0.2">
+        <p style="margin:0;"><b>This model is deliberately tuned as a screening tool, not a diagnostic one.</b> At its evaluated threshold it catches <b>94.1%</b> of true readmissions (sensitivity) — but it also flags roughly half of stable patients as a false positive (specificity <b>49.3%</b>). That's a real tradeoff, not a rounding error: RecoverPath is built to prioritize not missing a deteriorating patient over keeping the false-alarm rate low, on the assumption that a clinician reviewing a flagged case costs far less than a missed decompensation. Trained primarily on synthetic wearable data — real-world clinical validation is the next step before this feeds a live workflow.</p>
+      </div>
+    </div>
+
+    <!-- ROC / PR charts -->
+    <div class="charts-grid">
+      <div class="chart-card" data-reveal="draw">
+        <div class="chart-card-head">
+          <h3>ROC Curve</h3>
+          <span class="auc-badge">AUC = 0.861</span>
+        </div>
+        <svg viewBox="0 0 440 340" role="img" aria-label="ROC curve, area under curve 0.861, rising steeply at low false-positive rates then flattening toward the top-right corner">
+          <g class="chart-grid-line">
+            <line x1="55" y1="305" x2="425" y2="305"/>
+            <line x1="55" y1="15" x2="425" y2="15"/>
+            <line x1="55" y1="160" x2="425" y2="160"/>
+            <line x1="55" y1="15" x2="55" y2="305"/>
+            <line x1="425" y1="15" x2="425" y2="305"/>
+          </g>
+          <line class="chart-diagonal" x1="55" y1="305" x2="425" y2="15"/>
+          <path id="rocCurvePath" fill="none" stroke="var(--sig-bioz)" stroke-width="2.5"
+            d="M55,305 C58,260 60.4,210 62.4,186.1 C66,178 70,175 73.5,171.6 C78,160 81,150 84.6,142.6 C94,120 102,96 110.5,86.05 C117,82 123,78 129,75.9 C142,72 154,69 166,67.2 C173,63.5 178,60.5 184.5,58.5 C190,56 197,54 203,52.7 C214,45 228,36 240,32.4 C252,30.5 265,29 277,28.05 C288,27 302,25.8 314,25.15 C324,24 340,23 351,22.25 C362,21 377,20 388,19.35 C400,18 412,16.5 425,15"/>
+          <text class="chart-axis-label" x="55" y="318" text-anchor="start">0</text>
+          <text class="chart-axis-label" x="240" y="318" text-anchor="middle">0.5</text>
+          <text class="chart-axis-label" x="425" y="318" text-anchor="end">1.0</text>
+          <text class="chart-axis-label" x="48" y="308" text-anchor="end">0</text>
+          <text class="chart-axis-label" x="48" y="163" text-anchor="end">0.5</text>
+          <text class="chart-axis-label" x="48" y="19" text-anchor="end">1.0</text>
+          <text class="chart-title-x" x="240" y="335" text-anchor="middle">False Positive Rate</text>
+          <text class="chart-title-y" x="-160" y="20" text-anchor="middle" transform="rotate(-90)">True Positive Rate</text>
+        </svg>
+      </div>
+
+      <div class="chart-card" data-reveal="draw" data-reveal-delay="0.1">
+        <div class="chart-card-head">
+          <h3>Precision–Recall Curve</h3>
+          <span class="auc-badge">AUC = 0.765</span>
+        </div>
+        <svg viewBox="0 0 440 340" role="img" aria-label="Precision-recall curve, area under curve 0.765, holding above 0.85 precision until roughly 40% recall then declining toward 0.32 precision at full recall">
+          <g class="chart-grid-line">
+            <line x1="55" y1="305" x2="425" y2="305"/>
+            <line x1="55" y1="15" x2="425" y2="15"/>
+            <line x1="55" y1="160" x2="425" y2="160"/>
+            <line x1="55" y1="15" x2="55" y2="305"/>
+            <line x1="425" y1="15" x2="425" y2="305"/>
+          </g>
+          <line class="chart-baseline" x1="55" y1="211.5" x2="425" y2="211.5"/>
+          <text class="chart-axis-label" x="60" y="207" fill="var(--sig-acoustic)" text-anchor="start">baseline (positive rate ≈ 0.32)</text>
+          <path id="prCurvePath" fill="none" stroke="var(--accent)" stroke-width="2.5"
+            d="M55,29.5 C62,35 68,40 73.5,44 C80,43 86,42.5 92,42.55 C104,43 117,43.5 129,44 C141,44.3 154,44.6 166,44.87 C178,45.1 191,45.3 203,45.45 C206,44.8 208,44.4 210.4,44 C214,49 218,53 221.5,58.5 C227,63 234,68 240,73 C246,76.5 252,80 258.5,84.6 C264,86.5 271,88.5 277,90.4 C282,92 289,94 295.5,96.2 C301,98 308,100 314,102 C319,102.6 327,103 332.5,103.45 C337,109 344,118 351,128.1 C356,136 364,146 369.5,154.2 C374,159 383,163 388,168.7 C393,174 401,182 406.5,189 C411,195 419,204 425,212.2"/>
+          <text class="chart-axis-label" x="55" y="318" text-anchor="start">0</text>
+          <text class="chart-axis-label" x="240" y="318" text-anchor="middle">0.5</text>
+          <text class="chart-axis-label" x="425" y="318" text-anchor="end">1.0</text>
+          <text class="chart-axis-label" x="48" y="308" text-anchor="end">0</text>
+          <text class="chart-axis-label" x="48" y="163" text-anchor="end">0.5</text>
+          <text class="chart-axis-label" x="48" y="19" text-anchor="end">1.0</text>
+          <text class="chart-title-x" x="240" y="335" text-anchor="middle">Recall</text>
+          <text class="chart-title-y" x="-160" y="20" text-anchor="middle" transform="rotate(-90)">Precision</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Confusion matrix + derived rates -->
+    <div class="confusion-section">
+      <div data-reveal="up">
+        <h3 style="font-size:1.05rem; font-family:var(--font-body); font-weight:700; margin-bottom:1rem;">Confusion matrix <span style="font-family:var(--font-mono); font-weight:400; font-size:0.78rem; color:var(--ink-faint);">— 12,000 test windows</span></h3>
+        <table class="confusion-grid">
+          <caption class="visually-hidden">Confusion matrix comparing predicted vs actual readmission risk across 12,000 test windows</caption>
+          <thead>
+            <tr>
+              <th class="cm-corner" scope="col"><span class="visually-hidden">Actual \ Predicted</span></th>
+              <th class="cm-axis-label" scope="col">Predicted: No</th>
+              <th class="cm-axis-label" scope="col">Predicted: Yes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th class="cm-axis-label cm-row-label" scope="row">Actual: No</th>
+              <td class="cm-cell cm-correct"><b>4,012</b><span>True negative</span></td>
+              <td class="cm-cell cm-incorrect"><b>4,121</b><span>False positive</span></td>
+            </tr>
+            <tr>
+              <th class="cm-axis-label cm-row-label" scope="row">Actual: Yes</th>
+              <td class="cm-cell cm-incorrect"><b>227</b><span>False negative</span></td>
+              <td class="cm-cell cm-correct"><b>3,640</b><span>True positive</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div data-reveal="up" data-reveal-delay="0.1">
+        <h3 style="font-size:1.05rem; font-family:var(--font-body); font-weight:700; margin-bottom:1rem;">What that means in practice</h3>
+        <p>At the evaluated operating threshold, the model is tuned toward catching true deterioration even at the cost of a high false-positive rate — the numbers below make that tradeoff explicit rather than leading with the flattering ones.</p>
+        <div class="confusion-rates">
+          <div class="confusion-rate"><b>94.1%</b><span>Sensitivity (recall) — share of true readmissions caught</span></div>
+          <div class="confusion-rate"><b>49.3%</b><span>Specificity — share of stable patients correctly cleared</span></div>
+          <div class="confusion-rate"><b>46.9%</b><span>Precision — share of flags that were true readmissions</span></div>
+          <div class="confusion-rate"><b>0.626</b><span>F1 score at this threshold</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top model drivers, translated to plain language, tied back to the sensor stack -->
+    <div class="drivers-section">
+      <div class="drivers-head" data-reveal="up">
+        <p class="eyebrow">Top model drivers</p>
+        <h2>What actually moves the risk score.</h2>
+        <p>Ranked by SHAP feature importance from the trained model — the same sensor modalities introduced earlier on the main site, confirmed by the data rather than asserted.</p>
+      </div>
+      <ol class="driver-list" data-reveal="up" data-reveal-delay="0.1">
+        <li class="driver-item" data-rank="1">
+          <span class="driver-rank">01</span>
+          <span class="driver-copy"><b>Days with atrial fibrillation detected</b><span>Longer AFib exposure in the window is the single strongest driver of predicted risk.</span></span>
+          <span class="driver-source">ECG · MAX30001</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:100%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="2">
+          <span class="driver-rank">02</span>
+          <span class="driver-copy"><b>Share of ECG readings showing AFib</b><span>How much of the monitoring window had arrhythmia present, not just whether it occurred once.</span></span>
+          <span class="driver-source">ECG · MAX30001</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:92%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="3">
+          <span class="driver-rank">03</span>
+          <span class="driver-copy"><b>Time spent with blood oxygen below 92%</b><span>Cumulative hypoxia exposure — a direct read on lungs filling with fluid.</span></span>
+          <span class="driver-source">SpO2 · MAX30102</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:85%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="4">
+          <span class="driver-rank">04</span>
+          <span class="driver-copy"><b>Variability in blood oxygen readings</b><span>Unstable SpO2, not just a low average, flags respiratory decline.</span></span>
+          <span class="driver-source">SpO2 · MAX30102</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:78%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="5">
+          <span class="driver-rank">05</span>
+          <span class="driver-copy"><b>Total coughs detected in 24 hours</b><span>Rising cough frequency is an early acoustic signature of respiratory deterioration.</span></span>
+          <span class="driver-source">Acoustic · MAX4466</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:70%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="6">
+          <span class="driver-rank">06</span>
+          <span class="driver-copy"><b>Diabetes diagnosis on record</b><span>Comorbidity context the model weighs alongside the live sensor signal.</span></span>
+          <span class="driver-source">Clinical history</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:62%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="7">
+          <span class="driver-rank">07</span>
+          <span class="driver-copy"><b>Hospital admissions in the last 90 days</b><span>Recent admission history is one of the strongest non-sensor risk predictors in readmission research generally.</span></span>
+          <span class="driver-source">Clinical history</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:55%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="8">
+          <span class="driver-rank">08</span>
+          <span class="driver-copy"><b>Share of hours with wheeze detected</b><span>Sustained wheeze across the window, not an isolated event.</span></span>
+          <span class="driver-source">Acoustic · MAX4466</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:48%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="9">
+          <span class="driver-rank">09</span>
+          <span class="driver-copy"><b>COPD diagnosis on record</b><span>Comorbidity context, same role as the diabetes flag above.</span></span>
+          <span class="driver-source">Clinical history</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:40%"></span></span>
+        </li>
+        <li class="driver-item" data-rank="10">
+          <span class="driver-rank">10</span>
+          <span class="driver-copy"><b>Variability in breathing rate from motion sensing</b><span>Irregular respiratory rate, derived from chest-strap motion, flags labored breathing.</span></span>
+          <span class="driver-source">Activity · MPU-6050</span>
+          <span class="driver-bar-track"><span class="driver-bar-fill" style="width:33%"></span></span>
+        </li>
+      </ol>
+    </div>
+
+    <p class="limitations-note" data-reveal="up">
+      <b>Known limitation:</b> this model was trained primarily on a clinically-grounded synthetic dataset (with the UCI Diabetic Readmission dataset for demographic features and a small PhysioNet PPG sample for reference), not on real patient outcomes from RecoverPath hardware. The numbers above describe how well the model performs on its own held-out synthetic test split — they are not yet clinical validation, and shouldn't be read as one.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <span>© 2026 RecoverPath. Student-built medtech project.</span>
+  <span>Prototype stage — not yet available for clinical use.</span>
+</footer>
+
+<!-- ============================================================
+     SCRIPTS
+     No GSAP on this page — the ROC/PR draw-on-scroll below uses the
+     same plain stroke-dashoffset + IntersectionObserver pattern as the
+     bioimpedance spotlight chart on index.html, so there's no reason
+     to pull in the CDN dependency just for two more line charts.
+     ============================================================ -->
+<script src="site.js"></script>
+<script defer>
+(function(){
+  "use strict";
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------------- ROC / PR CURVE DRAW-ON-SCROLL ---------------- */
+  [ "rocCurvePath", "prCurvePath" ].forEach(function(id){
+    var path = document.getElementById(id);
+    if(!path) return;
+    var len = path.getTotalLength();
+    if(!reduceMotion){
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+    }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        if(!reduceMotion){
+          path.style.transition = "stroke-dashoffset 1.6s cubic-bezier(.16,.84,.32,1)";
+          path.style.strokeDashoffset = 0;
+        }
+        obs.unobserve(entry.target);
+      });
+    }, { threshold: 0.35 });
+    obs.observe(path.closest(".chart-card"));
+  });
+
+  /* ---------------- SHAP DRIVER BARS ---------------- */
+  var driverItems = document.querySelectorAll(".driver-item");
+  if(driverItems.length){
+    var driverObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        var fill = entry.target.querySelector(".driver-bar-fill");
+        if(fill){
+          var target = fill.style.width;
+          if(reduceMotion){
+            fill.style.transition = "none";
+          } else {
+            fill.style.width = "0%";
+            requestAnimationFrame(function(){ fill.style.width = target; });
+          }
+        }
+        driverObs.unobserve(entry.target);
+      });
+    }, { threshold: 0.3 });
+    driverItems.forEach(function(el){ driverObs.observe(el); });
+  }
+})();
+</script>
+</body>
+</html>

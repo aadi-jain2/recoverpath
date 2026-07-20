@@ -1,0 +1,350 @@
+/* ================================================================
+   RecoverPath — SHARED DESIGN SYSTEM
+   Used by both index.html and hospitals.html (and any future page).
+   Contains: design tokens, base reset/typography, nav, mobile menu,
+   and the button component. Page-specific styles (hero, sensor
+   cards, charts, etc.) stay in each page's own <style> block or
+   stylesheet so this file can be edited without touching page layout.
+   ================================================================ */
+
+/* ================================================================
+   DESIGN TOKENS — colors, type scale, spacing, motion
+   Edit CSS variables here to re-skin the entire site.
+   ================================================================ */
+:root{
+  color-scheme: light;
+  /* --- surfaces & ink (light theme) --- */
+  --bg: #f3efe4;
+  --bg-alt: #e9e2d1;
+  --surface: #fbf9f2;
+  --surface-raised: #ffffff;
+  --ink: #131a17;
+  --ink-soft: #4a554e;
+  /* Darkened from an earlier #7c8880 — that failed WCAG AA (as low as
+     2.86:1 against --bg-alt) for the small mono labels it's used on.
+     #556056 clears 4.5:1 against bg/bg-alt/surface while staying
+     visually "fainter" than --ink-soft. */
+  --ink-faint: #556056;
+  --line: rgba(19,26,23,0.14);
+  --line-strong: rgba(19,26,23,0.28);
+
+  /* --- accent: medical-tech teal --- */
+  --accent: #0e6e62;
+  --accent-strong: #093f38;
+  --accent-soft: #d8ece7;
+  --accent-contrast: #f3efe4;
+  --accent-rgb: 14,110,98;
+
+  /* --- signal colors (data visuals) ---
+     Darkened from initial picks (#c1554a / #9a6b2f / #2b6ea8) — those
+     dropped under 4.5:1 as the small "sensor-part" mono label on white
+     card surfaces and, more noticeably, on the --accent-soft hover
+     state. Hue preserved, value darkened until AA passes in both. */
+  --sig-ecg: #a8463c;
+  --sig-bioz: #0e6e62;
+  --sig-spo2: #24628f;
+  --sig-acoustic: #7e5623;
+  --sig-imu: #6a5a9c;
+
+  /* --- type scale --- */
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+
+  --step-eyebrow: clamp(0.72rem, 0.68rem + 0.1vw, 0.8rem);
+  --step-body: clamp(1rem, 0.95rem + 0.15vw, 1.125rem);
+  --step-lg: clamp(1.25rem, 1.1rem + 0.5vw, 1.6rem);
+  --step-h3: clamp(1.6rem, 1.3rem + 1vw, 2.2rem);
+  --step-h2: clamp(2.2rem, 1.7rem + 2vw, 3.4rem);
+  --step-h1: clamp(2.8rem, 1.9rem + 4.2vw, 6rem);
+  --step-stat: clamp(3rem, 2rem + 5vw, 7rem);
+
+  /* --- spacing --- */
+  --gutter: clamp(1.25rem, 1rem + 1.5vw, 3rem);
+  --section-pad: clamp(4rem, 3rem + 4vw, 8rem);
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  /* --- motion --- */
+  --ease-out: cubic-bezier(.16,.84,.32,1);
+  --ease-in-out: cubic-bezier(.65,.05,.36,1);
+  --dur-s: 0.25s;
+  --dur-m: 0.55s;
+  --dur-l: 1s;
+
+  --shadow-soft: 0 1px 2px rgba(19,26,23,0.06), 0 8px 24px -12px rgba(19,26,23,0.18);
+}
+
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg: #0a1310;
+  --bg-alt: #0f1c17;
+  --surface: #10201a;
+  --surface-raised: #142822;
+  --ink: #eef4f0;
+  --ink-soft: #a9bab1;
+  /* Lightened from #718077 — that failed 4.5:1 against --surface-raised
+     (3.73:1) where sensor-card/BOM/team-role labels sit. */
+  --ink-faint: #8fa097;
+  --line: rgba(255,255,255,0.12);
+  --line-strong: rgba(255,255,255,0.24);
+
+  --accent: #3fd0bd;
+  --accent-strong: #8ff0e2;
+  --accent-soft: rgba(63,208,189,0.14);
+  --accent-contrast: #06120f;
+  --accent-rgb: 63,208,189;
+
+  --sig-ecg: #e08578;
+  --sig-bioz: #3fd0bd;
+  --sig-spo2: #6ba9de;
+  --sig-acoustic: #d1a458;
+  --sig-imu: #a794e0;
+
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -14px rgba(0,0,0,0.6);
+}
+
+*{ box-sizing: border-box; }
+/* overflow-x:hidden on BOTH html and body: the pre-reveal transforms
+   used by [data-reveal="left"/"right"] (see site.js) intentionally sit
+   translateX(±32px) off their final position until scrolled into view,
+   and body's overflow-x alone did not reliably clip that in testing —
+   setting it on html too closes the gap and was verified with
+   Playwright (window.scrollTo can no longer move scrollX at any
+   tested width, 375–1920px). */
+html{ scroll-behavior: auto; overflow-x: hidden; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out);
+  overflow-x: hidden;
+}
+img{ max-width:100%; display:block; }
+a{ color: inherit; }
+h1,h2,h3,h4{
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.eyebrow{
+  font-family: var(--font-mono);
+  font-size: var(--step-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.eyebrow::before{
+  content:"";
+  width: 22px; height: 1px;
+  background: currentColor;
+  display: inline-block;
+}
+p{ margin: 0 0 1em; color: var(--ink-soft); }
+.visually-hidden{
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip:rect(0 0 0 0); white-space:nowrap;
+}
+.skip-link{
+  position:absolute; left:8px; top:-48px;
+  background:var(--accent); color:var(--accent-contrast);
+  padding:0.6em 1em; border-radius: var(--radius-sm); z-index:200;
+  transition: top var(--dur-s);
+  font-size:0.85rem;
+}
+.skip-link:focus{ top:8px; }
+:focus-visible{ outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The teal focus ring drops to ~1.9:1 against the dark-teal spotlight
+   and contact sections in light mode — below the 3:1 WCAG 1.4.11
+   minimum for a non-text UI indicator. Both of those sections already
+   use a near-cream color for their text, which passes comfortably in
+   both themes, so it's reused here rather than adding a third color. */
+.contact :focus-visible, .spotlight :focus-visible{ outline-color: #f3efe4; }
+
+.wrap{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+section{ position: relative; }
+.section-pad{ padding-top: var(--section-pad); padding-bottom: var(--section-pad); }
+
+/* ---------------------------------------------------------------
+   NAV
+   --------------------------------------------------------------- */
+.site-nav{
+  position: fixed; top:0; left:0; right:0;
+  /* Higher than .mobile-menu (z-index:150) — verified via
+     elementFromPoint testing that the full-screen menu was covering
+     the nav bar entirely, hiding the hamburger's own X/close state
+     with no visible way to close except Escape. Nav (and the brand
+     mark) now stays on top and reachable while the menu is open. */
+  z-index: 200;
+  display:flex; align-items:center; justify-content: space-between;
+  padding: 0.9rem var(--gutter);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-s), background var(--dur-m);
+}
+.site-nav.is-scrolled{ border-color: var(--line); }
+.brand{
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  display:flex; align-items:center; gap:0.55rem;
+  text-decoration:none;
+}
+.brand-mark{
+  width: 34px; height: 34px;
+  flex-shrink:0;
+  object-fit: contain;
+  /* RC_Logo_TBG.png is a fixed dark-charcoal mark on a transparent
+     background — it reads fine on the light theme as-is, but would be
+     nearly invisible against the dark theme's near-black nav. Rather
+     than ask for a second light-mode asset, invert it in dark mode:
+     since it's a single flat dark color with real alpha transparency,
+     invert() cleanly flips it to a light mark with no artifacts. */
+  transition: filter var(--dur-m) var(--ease-out);
+}
+[data-theme="dark"] .brand-mark{ filter: invert(1); }
+.nav-links{
+  display:flex; align-items:center; gap: 1.6rem;
+  list-style:none; margin:0; padding:0;
+}
+.nav-links a{
+  text-decoration:none;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  position: relative;
+  padding: 0.2rem 0;
+  transition: color var(--dur-s);
+}
+.nav-links a:hover, .nav-links a[aria-current="page"]{ color: var(--ink); }
+.nav-links a::after{
+  content:""; position:absolute; left:0; right:100%; bottom:-2px; height:1px;
+  background: var(--accent);
+  transition: right var(--dur-m) var(--ease-out);
+}
+.nav-links a:hover::after, .nav-links a[aria-current="page"]::after{ right:0; }
+.nav-right{ display:flex; align-items:center; gap:1rem; }
+.theme-toggle{
+  width: 40px; height: 24px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  position: relative;
+  cursor: pointer;
+  padding:0;
+}
+.theme-toggle::after{
+  content:"";
+  position:absolute; top:2px; left:2px;
+  width: 18px; height:18px; border-radius:50%;
+  background: var(--accent);
+  transition: transform var(--dur-m) var(--ease-out);
+}
+[data-theme="dark"] .theme-toggle::after{ transform: translateX(16px); }
+
+/* Mobile hamburger — two lines that rotate into an X, matches the
+   restrained line-based visual language used elsewhere (eyebrow rules,
+   theme toggle). Hidden above the nav-collapse breakpoint. */
+.nav-hamburger{
+  display:none;
+  width: 34px; height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.hamburger-line{
+  position:absolute; left:7px; right:7px; height:1.5px;
+  background: var(--ink);
+  transition: transform var(--dur-s) var(--ease-out), opacity var(--dur-s) var(--ease-out), top var(--dur-s) var(--ease-out);
+}
+.hamburger-line:first-child{ top: 13px; }
+.hamburger-line:last-child{ top: 20px; }
+.nav-hamburger.is-active .hamburger-line:first-child{ top:16.5px; transform: rotate(45deg); }
+.nav-hamburger.is-active .hamburger-line:last-child{ top:16.5px; transform: rotate(-45deg); }
+
+/* Full-screen mobile menu overlay */
+.mobile-menu{
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--bg);
+  display:flex; flex-direction:column; justify-content:center;
+  padding: 6rem var(--gutter) 3rem;
+  opacity: 0; visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out), visibility 0s linear var(--dur-m);
+}
+.mobile-menu.is-open{
+  opacity: 1; visibility: visible; transform: translateY(0);
+  transition: opacity var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out), visibility 0s;
+}
+.mobile-menu-links{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap: 0.4rem; }
+.mobile-menu-links li{ border-bottom: 1px solid var(--line); }
+.mobile-menu-links li:last-child{ border-bottom:none; margin-top: 1.5rem; }
+.mobile-menu-links a{
+  display:block; padding: 1rem 0;
+  font-family: var(--font-display); font-size: 1.6rem; font-weight:500;
+  text-decoration:none; color: var(--ink);
+}
+.mobile-menu-links a:hover{ color: var(--accent); }
+/* The Contact CTA re-uses .btn inside this list — .btn's own
+   color:var(--accent-contrast) was losing to the rule above on
+   specificity, landing dark text on the dark-teal button fill at
+   2.85:1 (axe-core caught this in the actual rendered mobile menu). */
+.mobile-menu-links a.btn{ color: var(--accent-contrast); }
+.mobile-menu-links a.btn:hover{ color: var(--accent-contrast); }
+body.mobile-menu-open{ overflow: hidden; }
+@media (prefers-reduced-motion: reduce){
+  .mobile-menu{ transition: opacity 0.4s ease, visibility 0s linear 0.4s; transform:none; }
+  .mobile-menu.is-open{ transition: opacity 0.4s ease, visibility 0s; transform:none; }
+}
+
+.btn{
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-sm);
+  padding: 0.75em 1.4em;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  text-decoration:none;
+  display:inline-flex; align-items:center; gap:0.5em;
+  transition: transform var(--dur-s) var(--ease-out), box-shadow var(--dur-s), background var(--dur-s);
+}
+.btn:hover{ box-shadow: var(--shadow-soft); transform: translateY(-1px); }
+.btn.btn-ghost{
+  background: transparent; color: var(--ink); border-color: var(--line-strong);
+}
+.btn.btn-ghost:hover{ border-color: var(--accent); color: var(--accent); }
+
+/* ---------------------------------------------------------------
+   NAV-COLLAPSE BREAKPOINT (shared: hamburger takes over from here down)
+   Page-specific responsive rules for content below this breakpoint
+   live in each page's own stylesheet.
+   --------------------------------------------------------------- */
+@media (max-width: 980px){
+  .nav-links{ display:none; }
+  .nav-hamburger{ display:block; }
+  .nav-contact-btn{ display:none; }
+}
