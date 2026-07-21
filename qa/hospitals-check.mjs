@@ -23,7 +23,7 @@ const idxErrors = await withErrors(page, "index");
 await page.goto(idxUrl);
 await page.waitForTimeout(700);
 
-const hospLinkDesktop = await page.$('.nav-links a[href="hospitals.html"]');
+const hospLinkDesktop = await page.$('.nav-external[href="hospitals.html"]');
 console.log("index.html: desktop 'For Hospitals' link present:", !!hospLinkDesktop);
 
 // mobile menu at narrow width
@@ -47,7 +47,7 @@ const isDark = await page.evaluate(() => document.documentElement.getAttribute("
 console.log("index.html: theme toggle works:", isDark);
 
 // click the nav link and verify real navigation to hospitals.html
-await page.click('.nav-links a[href="hospitals.html"]');
+await page.click('.nav-external[href="hospitals.html"]');
 await page.waitForLoadState("load");
 console.log("index.html -> nav click navigated to:", page.url());
 await page.goBack();

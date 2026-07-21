@@ -240,6 +240,43 @@ section{ position: relative; }
   transition: right var(--dur-m) var(--ease-out);
 }
 .nav-links a:hover::after, .nav-links a[aria-current="page"]::after{ right:0; }
+/* Groups the scroll-anchor <ul> with the page-navigation link below as
+   ONE flex child of .site-nav (which is itself justify-content:
+   space-between across brand / this group / nav-right) — keeps the
+   existing 3-way spacing intact while still letting the two link
+   *kinds* sit visually apart from each other inside that group. */
+.nav-center{ display:flex; align-items:center; gap: 1.3rem; }
+.nav-divider{
+  width: 1px; height: 16px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+/* "For Hospitals" (and hospitals.html's own way back to the homepage,
+   via .brand) are real page navigations, not same-page scrolls like
+   the rest of .nav-links — deliberately given a different resting
+   color (--ink-faint, already AA-checked elsewhere) and a small
+   external-link glyph instead of the scroll-links' grow-in underline,
+   so a visitor can tell before clicking that this one leaves the
+   page. Kept intentionally quiet: no badge, no color-coded pill. */
+.nav-external{
+  display:flex; align-items:center; gap:0.4em;
+  text-decoration:none;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  transition: color var(--dur-s);
+}
+.nav-external:hover{ color: var(--accent); }
+.nav-external[aria-current="page"]{ color: var(--ink); }
+.nav-external-icon{
+  width: 9px; height: 9px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+/* Same glyph reused inline in .brand on hospitals.html only (index.html's
+   brand is a same-page "#top" scroll and doesn't get one) — the logo is
+   already a universal "go home" convention, but this makes the "leaves
+   the page" behavior explicit rather than assumed. */
+.brand .nav-external-icon{ margin-left: 0.1em; opacity: 0.55; }
 .nav-right{ display:flex; align-items:center; gap:1rem; }
 .theme-toggle{
   width: 40px; height: 24px;
@@ -305,6 +342,31 @@ section{ position: relative; }
   text-decoration:none; color: var(--ink);
 }
 .mobile-menu-links a:hover{ color: var(--accent); }
+/* Marks the start of a new "kind" of link within the list — currently
+   used for "For Hospitals", the one item in this list that navigates
+   to a different page instead of scrolling within the current one.
+   Mirrors the divider/spacing treatment .nav-external gets on desktop. */
+.mobile-menu-links li.nav-group-break{
+  margin-top: 1.2rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+/* Smaller/mono/uppercase instead of the big serif scroll-link style
+   above — reinforces that this behaves differently, same reasoning as
+   .nav-external on desktop, just adapted to the mobile menu's type
+   scale rather than reusing identical styles verbatim. */
+.mobile-menu-links a.nav-external{
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  color: var(--ink-faint);
+  padding: 0.7rem 0;
+  display:flex; align-items:center; gap:0.5em;
+}
+.mobile-menu-links a.nav-external:hover{ color: var(--accent); }
+.mobile-menu-links a.nav-external[aria-current="page"]{ color: var(--ink); }
 /* The Contact CTA re-uses .btn inside this list — .btn's own
    color:var(--accent-contrast) was losing to the rule above on
    specificity, landing dark text on the dark-teal button fill at
@@ -344,7 +406,9 @@ body.mobile-menu-open{ overflow: hidden; }
    live in each page's own stylesheet.
    --------------------------------------------------------------- */
 @media (max-width: 980px){
-  .nav-links{ display:none; }
+  /* .nav-links now lives inside .nav-center alongside .nav-external —
+     hiding the wrapper hides both in one rule. */
+  .nav-center{ display:none; }
   .nav-hamburger{ display:block; }
   .nav-contact-btn{ display:none; }
 }
